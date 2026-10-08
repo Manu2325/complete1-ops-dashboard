@@ -1,5 +1,20 @@
 const GCHAT_WEBHOOK_URL = "https://chat.googleapis.com/v1/spaces/AAQAW2t94sc/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=2GZ-2ChSl1mMEhgh7uxocoMdZt07sC-3qki7uPKIPNs";
 
+// Credenciales de Firebase de tu proyecto operational-task-manager
+const firebaseConfig = {
+    apiKey: "AIzaSyBiofsFEyvFS2UEDzUE2ZffdLBqZm_xotA",
+    authDomain: "operational-task-manager.firebaseapp.com",
+    databaseURL: "https://operational-task-manager-default-rtdb.firebaseio.com",
+    projectId: "operational-task-manager",
+    storageBucket: "operational-task-manager.firebasestorage.app",
+    messagingSenderId: "446600174564",
+    appId: "1:446600174564:web:bce115d3bfae3e570745f1"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 function getTodayString() {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -65,27 +80,57 @@ const defaultProfiles = {
     }
 };
 
-let profiles = JSON.parse(localStorage.getItem("eqfp_profiles_v2")) || defaultProfiles;
+let profiles = defaultProfiles;
 let currentUser = localStorage.getItem("eqfp_current_user") || "enmanuel";
-
-if (!profiles[currentUser]) currentUser = "enmanuel";
-
-let userTasks = JSON.parse(localStorage.getItem(`eqfp_calendar_tasks_v7_${currentUser}`)) || profiles[currentUser].tasks;
-let completedTasks = JSON.parse(localStorage.getItem(`eqfp_completed_v7_${currentUser}`)) || {};
+let userTasks = [];
+let completedTasks = {};
 
 let ultimaHoraDisparada = null;
-let ultimoCierreNocheDisparado = null; // Control para ejecución única a las 10:30 PM
+let ultimoCierreNocheDisparado = null;
 
 function init() {
-    renderUserSelector();
     document.getElementById("newTaskDate").value = getTodayString();
     document.getElementById("dailyViewDate").value = getTodayString();
-    loadUserProfile();
+
+    // Escuchar cambios de perfiles en tiempo real desde Firebase
+    db.ref("profiles").on("value", snapshot => {
+        const val = snapshot.val();
+        if (val) {
+            profiles = val;
+        } else {
+            db.ref("profiles").set(defaultProfiles);
+        }
+        renderUserSelector();
+        loadUserProfile();
+    });
+
     startTimers();
 }
 
-function saveProfiles() {
-    localStorage.setItem("eqfp_profiles_v2", JSON.stringify(profiles));
+function saveProfilesInCloud() {
+    db.ref("profiles").set(profiles);
+}
+
+function listenUserTasksInCloud() {
+    db.ref(`tasks/${currentUser}`).on("value", snapshot => {
+        const data = snapshot.val();
+        if (data) {
+            userTasks = data.userTasks || [];
+            completedTasks = data.completedTasks || {};
+        } else {
+            userTasks = profiles[currentUser] ? profiles[currentUser].tasks || [] : [];
+            completedTasks = {};
+            saveUserTasksInCloud();
+        }
+        renderTasks();
+    });
+}
+
+function saveUserTasksInCloud() {
+    db.ref(`tasks/${currentUser}`).set({
+        userTasks: userTasks,
+        completedTasks: completedTasks
+    });
 }
 
 function renderUserSelector() {
@@ -101,8 +146,8 @@ function changeUser() {
     currentUser = document.getElementById("userSelector").value;
     localStorage.setItem("eqfp_current_user", currentUser);
     
-    userTasks = JSON.parse(localStorage.getItem(`eqfp_calendar_tasks_v7_${currentUser}`)) || (profiles[currentUser] ? profiles[currentUser].tasks : []);
-    completedTasks = JSON.parse(localStorage.getItem(`eqfp_completed_v7_${currentUser}`)) || {};
+    db.ref(`tasks/${currentUser}`).off();
+    listenUserTasksInCloud();
     loadUserProfile();
 }
 
@@ -120,12 +165,7 @@ function loadUserProfile() {
         btnManage.style.display = "none";
     }
 
-    renderTasks();
-}
-
-function saveUserTasks() {
-    localStorage.setItem(`eqfp_calendar_tasks_v7_${currentUser}`, JSON.stringify(userTasks));
-    localStorage.setItem(`eqfp_completed_v7_${currentUser}`, JSON.stringify(completedTasks));
+    listenUserTasksInCloud();
 }
 
 function getWeekNumber(d) {
@@ -136,23 +176,21 @@ function getWeekNumber(d) {
     return { week: weekNo, year: d.getUTCFullYear() };
 }
 
-// Calcular el siguiente día hábil (Lunes a Viernes)
 function getNextBusinessDay(dateString) {
     let date = new Date(dateString + "T00:00:00");
-    let dayOfWeek = date.getDay(); // 0: Dom, 1: Lun, 2: Mar, 3: Mié, 4: Jue, 5: Vie, 6: Sáb
+    let dayOfWeek = date.getDay();
 
     if (dayOfWeek === 5) {
-        date.setDate(date.getDate() + 3); // De viernes pasa a lunes
+        date.setDate(date.getDate() + 3);
     } else if (dayOfWeek === 6) {
-        date.setDate(date.getDate() + 2); // De sábado pasa a lunes
+        date.setDate(date.getDate() + 2);
     } else {
-        date.setDate(date.getDate() + 1); // Lunes a jueves pasa al siguiente día
+        date.setDate(date.getDate() + 1);
     }
 
     return date.toISOString().split('T')[0];
 }
 
-// Ejecución de cierre y reagendamiento
 function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
     const tasksForDay = userTasks.filter(t => t.date === fechaObjetivo);
     const incompleteTasks = tasksForDay.filter(t => !completedTasks[t.id]);
@@ -167,12 +205,11 @@ function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
     const nextBusinessDay = getNextBusinessDay(fechaObjetivo);
     const profile = profiles[currentUser];
 
-    // Mover las tareas pendientes al siguiente día hábil
     incompleteTasks.forEach(task => {
         task.date = nextBusinessDay;
     });
 
-    saveUserTasks();
+    saveUserTasksInCloud();
 
     let listText = incompleteTasks.map(t => `• *${t.title}*`).join('\n');
     let tituloAlerta = esAutomatico ? "🚨 *CIERRE NOCTURNO AUTOMÁTICO (10:30 PM)* 🚨" : "⚠️ *REAGENDAMIENTO AUTOMÁTICO DE TAREAS* ⚠️";
@@ -180,7 +217,6 @@ function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
     const msg = `${tituloAlerta}\n\nSupervisor: *${profile.name}*\nFecha Original: *${fechaObjetivo}*\nReagendadas para: *${nextBusinessDay}* (Siguiente Día Hábil)\n\nTareas Incompletas Reagendadas:\n${listText}\n\nLas tareas fueron reprogramadas en la agenda para su atención.`;
 
     enviarAlertaGoogleChat(msg);
-    renderTasks();
 
     if (!esAutomatico) {
         alert(`Se enviaron las alertas a Google Chat y las ${incompleteTasks.length} tareas fueron movidas a la agenda del ${nextBusinessDay}.`);
@@ -412,24 +448,21 @@ function renderSummaryTab() {
 
 function toggleTask(id) {
     completedTasks[id] = !completedTasks[id];
-    saveUserTasks();
-    renderTasks();
+    saveUserTasksInCloud();
 }
 
 function toggleUrgent(id) {
     const task = userTasks.find(t => t.id === id);
     if (task) {
         task.urgent = !task.urgent;
-        saveUserTasks();
-        renderTasks();
+        saveUserTasksInCloud();
     }
 }
 
 function deleteTask(id) {
     userTasks = userTasks.filter(t => t.id !== id);
     delete completedTasks[id];
-    saveUserTasks();
-    renderTasks();
+    saveUserTasksInCloud();
 }
 
 function addNewCustomTask() {
@@ -445,8 +478,7 @@ function addNewCustomTask() {
 
     const newId = "task_" + Date.now();
     userTasks.push({ id: newId, date: date, title: title, sub: sub, urgent: isUrgent });
-    saveUserTasks();
-    renderTasks();
+    saveUserTasksInCloud();
 
     document.getElementById("newTaskTitle").value = "";
     document.getElementById("newTaskSub").value = "";
@@ -468,8 +500,7 @@ function resetAllDailyTasks() {
     const selectedDate = document.getElementById("dailyViewDate").value;
     const tasksForDay = userTasks.filter(t => t.date === selectedDate);
     tasksForDay.forEach(t => completedTasks[t.id] = false);
-    saveUserTasks();
-    renderTasks();
+    saveUserTasksInCloud();
 }
 
 function switchTab(tabId) {
@@ -515,15 +546,12 @@ function transferManagerRole() {
         successor.isManager = true;
         successor.role = "Operations Manager";
 
-        saveProfiles();
+        saveProfilesInCloud();
 
         currentUser = successorId;
         localStorage.setItem("eqfp_current_user", currentUser);
 
-        renderUserSelector();
-        changeUser();
         closeTeamModal();
-
         alert(`🎉 ¡Traspaso completado! ${successor.name} es el nuevo Operations Manager.`);
     }
 }
@@ -567,11 +595,7 @@ function addNewSupervisor() {
         ]
     };
 
-    saveProfiles();
-    renderUserSelector();
-    renderSupervisorManageList();
-    populateSuccessorDropdown();
-
+    saveProfilesInCloud();
     document.getElementById("newSupName").value = "";
     document.getElementById("newSupSub").value = "";
     alert(`Miembro ${name} agregado con éxito.`);
@@ -580,14 +604,10 @@ function addNewSupervisor() {
 function removeSupervisor(id) {
     if (confirm(`¿Estás seguro de que deseas eliminar a ${profiles[id].name} del dashboard?`)) {
         delete profiles[id];
-        saveProfiles();
+        saveProfilesInCloud();
         
         if (currentUser === id) currentUser = "adrian";
-        
-        renderUserSelector();
-        changeUser();
-        renderSupervisorManageList();
-        populateSuccessorDropdown();
+        localStorage.setItem("eqfp_current_user", currentUser);
     }
 }
 
@@ -650,7 +670,6 @@ function updateRealTimeTimers() {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
 
-    // 1. Alerta bi-horaria en minuto 0 de horas impares
     if (currentHour >= 9 && currentHour % 2 === 1 && currentMinute === 0) {
         if (ultimaHoraDisparada !== currentHour) {
             ultimaHoraDisparada = currentHour;
@@ -658,7 +677,6 @@ function updateRealTimeTimers() {
         }
     }
 
-    // 2. DETECCIÓN AUTOMÁTICA DE CIERRE A LAS 10:30 PM (22:30 HS)
     if (currentHour === 22 && currentMinute === 30) {
         const todayStr = getTodayString();
         if (ultimoCierreNocheDisparado !== todayStr) {

@@ -55,7 +55,7 @@
         <button class="tab-btn" onclick="switchTab('summaryTab')">📊 Resumen General (Summary)</button>
     </div>
 
-    <!-- Creador de Tareas -->
+    <!-- Creador de Tareas con Opción Urgente -->
     <div class="add-task-box">
         <input type="text" id="newTaskTitle" placeholder="Nombre de la tarea...">
         <input type="text" id="newTaskSub" placeholder="Detalle / Subtítulo opcional">
@@ -77,7 +77,6 @@
                 <label for="dailyViewDate">Viendo Tareas del Día:</label>
                 <input type="date" id="dailyViewDate" onchange="renderTasks()">
             </div>
-            <!-- BOTÓN DE CIERRE Y REAGENDAMIENTO DÍA HÁBIL -->
             <button class="btn btn-warning" onclick="cerrarDiaYReagendarIncompletas()">
                 ⏭️ Cierre de Día: Mover Incompletas al Siguiente Día Hábil
             </button>
@@ -162,7 +161,6 @@
         </div>
     </div>
 
-    <!-- Reglas Obligatorias -->
     <div class="rule-box">
         <strong>Instrucciones Clave:</strong>
         <ul>
@@ -170,6 +168,10 @@
             <li>Documentación obligatoria para todas las sesiones de feedback y acciones correctivas.</li>
         </ul>
     </div>
+
+    <!-- LIBRERÍAS DE FIREBASE EN TIEMPO REAL -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <script src="app.js"></script>
 </body>
