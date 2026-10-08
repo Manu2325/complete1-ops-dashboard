@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operations Team Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <header>
+        <div>
+            <h1 id="appTitle">Operations Dashboard</h1>
+            <p class="subtitle" id="userRoleSubtitle">Cargando perfil...</p>
+        </div>
+        <div class="header-actions">
+            <label for="userSelector" class="user-label">Usuario:</label>
+            <select id="userSelector" class="user-selector" onchange="changeUser()"></select>
+            
+            <button id="btnManageTeam" class="btn btn-warning btn-sm" style="display: none;" onclick="openTeamModal()">👥 Gestionar Equipo / 👑 Delegar Mando</button>
+            <button class="btn btn-gchat btn-sm" onclick="testChatWebhook()">Probador Chat</button>
+            <button class="btn btn-danger btn-sm" onclick="resetAllDailyTasks()">Reiniciar Día</button>
+        </div>
+    </header>
+
+    <!-- Temporizadores y Accesos Rápidos -->
+    <section class="timer-bar">
+        <div class="timer-card">
+            <div>
+                <div class="task-title">Respuesta Google Chat SLA</div>
+                <div class="task-sub">Respuesta máx: &lt; 10 min</div>
+            </div>
+            <div class="timer-action">
+                <div class="timer-display" id="chatTimer">10:00</div>
+                <button class="btn btn-sm" onclick="resetChatTimer()">Reset Timer</button>
+            </div>
+        </div>
+        <div class="timer-card">
+            <div>
+                <div class="task-title">Resultados Bi-horarios</div>
+                <div class="task-sub">Actualización cada 2 horas (Desde 9:00 AM)</div>
+            </div>
+            <div class="timer-action">
+                <div class="timer-display" id="bihourlyTimer">02:00:00</div>
+                <button class="btn btn-gchat btn-sm" onclick="publicarYReiniciarBihorario()">Alerta & Reset</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pestañas de Navegación -->
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('dailyTab')">Diario</button>
+        <button class="tab-btn" onclick="switchTab('weeklyTab')">Semanal (Semanas del Año)</button>
+        <button class="tab-btn" onclick="switchTab('monthlyTab')">Mensual (Pendientes del Mes)</button>
+        <button class="tab-btn" onclick="switchTab('summaryTab')">📊 Resumen General (Summary)</button>
+    </div>
+
+    <!-- Creador de Tareas -->
+    <div class="add-task-box">
+        <input type="text" id="newTaskTitle" placeholder="Nombre de la tarea...">
+        <input type="text" id="newTaskSub" placeholder="Detalle / Subtítulo opcional">
+        <div class="date-picker-group">
+            <label for="newTaskDate">Asignar Fecha:</label>
+            <input type="date" id="newTaskDate">
+        </div>
+        <div class="urgent-checkbox-group">
+            <input type="checkbox" id="newTaskUrgent">
+            <label for="newTaskUrgent" style="color: var(--accent-danger); font-weight: bold; cursor: pointer;">🚨 Marcar Urgente</label>
+        </div>
+        <button class="btn" onclick="addNewCustomTask()">+ Agregar a Agenda</button>
+    </div>
+
+    <!-- Contenido Diario -->
+    <div id="dailyTab" class="tab-content active">
+        <div class="filter-date-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <label for="dailyViewDate">Viendo Tareas del Día:</label>
+                <input type="date" id="dailyViewDate" onchange="renderTasks()">
+            </div>
+            <!-- BOTÓN DE CIERRE Y REAGENDAMIENTO DÍA HÁBIL -->
+            <button class="btn btn-warning" onclick="cerrarDiaYReagendarIncompletas()">
+                ⏭️ Cierre de Día: Mover Incompletas al Siguiente Día Hábil
+            </button>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-label">
+                <span>Progreso Diario de Tareas Agenda</span>
+                <span id="dailyProgressText">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="dailyProgressBar"></div>
+            </div>
+        </div>
+
+        <div class="task-list" id="dailyTaskList"></div>
+    </div>
+
+    <!-- Contenido Semanal -->
+    <div id="weeklyTab" class="tab-content">
+        <div class="tab-action-header">
+            <button class="btn btn-gchat" onclick="enviarAlertaLunesWFM()">Enviar Recordatorio WFM a Google Chat</button>
+        </div>
+        <div id="weeklyContainer"></div>
+    </div>
+
+    <!-- Contenido Mensual -->
+    <div id="monthlyTab" class="tab-content">
+        <div id="monthlyContainer"></div>
+    </div>
+
+    <!-- Pestaña Resumen General (Summary) -->
+    <div id="summaryTab" class="tab-content">
+        <div class="summary-controls-bar">
+            <div>
+                <button class="btn btn-gchat" onclick="enviarAlertasUrgentesDelDia()">🚨 Notificar Urgentes del Día a Google Chat</button>
+            </div>
+            <div class="filter-options">
+                <label>Filtrar Summary:</label>
+                <select id="summaryFilter" onchange="renderSummaryTab()">
+                    <option value="all">Todas las Tareas del Mes</option>
+                    <option value="pending">Solo Pendientes</option>
+                    <option value="urgent">Solo Urgentes (🚨)</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="summaryContainer"></div>
+    </div>
+
+    <!-- MODAL DE GESTIÓN DE EQUIPO Y TRASPASO DE MANDO -->
+    <div id="teamModal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>👥 Gestión de Equipo y Traspaso de Mando</h2>
+                <button class="close-modal-btn" onclick="closeTeamModal()">✖</button>
+            </div>
+            <div class="modal-body">
+                <div class="transfer-box">
+                    <h3>👑 Traspasar Cargo de Operations Manager</h3>
+                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:8px;">
+                        Selecciona el supervisor o agente que tomará el cargo de Operations Manager.
+                    </p>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <select id="transferSuccessorSelect" class="form-select-full"></select>
+                        <button class="btn btn-warning" onclick="transferManagerRole()">Traspasar Cargo</button>
+                    </div>
+                </div>
+
+                <hr style="border-color: var(--border-color); margin: 16px 0;">
+
+                <h3>Agregar Nuevo Supervisor / Agente</h3>
+                <div class="add-supervisor-form">
+                    <input type="text" id="newSupName" placeholder="Nombre Completo (Ej: Carlos Mendez)">
+                    <input type="text" id="newSupSub" placeholder="Cargo / Proyecto (Ej: Supervisor TELCOM)">
+                    <button class="btn" onclick="addNewSupervisor()">+ Agregar a la Lista</button>
+                </div>
+
+                <h3 style="margin-top: 20px;">Miembros de Equipo Actuales</h3>
+                <div id="supervisorListContainer" class="supervisor-manage-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reglas Obligatorias -->
+    <div class="rule-box">
+        <strong>Instrucciones Clave:</strong>
+        <ul>
+            <li>Copia obligatoria en TODOS los correos: <code>adrian.l@complete1.com</code></li>
+            <li>Documentación obligatoria para todas las sesiones de feedback y acciones correctivas.</li>
+        </ul>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,739 @@
+const GCHAT_WEBHOOK_URL = "https://chat.googleapis.com/v1/spaces/AAQAW2t94sc/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=2GZ-2ChSl1mMEhgh7uxocoMdZt07sC-3qki7uPKIPNs";
+
+function getTodayString() {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+}
+
+const defaultProfiles = {
+    enmanuel: {
+        id: "enmanuel",
+        name: "Enmanuel Prada",
+        role: "Operations Supervisor",
+        subtitle: "Gestión de Operaciones EQ & FP | Cobertura Oct 19 - Nov 14, 2026",
+        isManager: false,
+        tasks: [
+            { id: "e_d1", date: getTodayString(), title: "Verificar Autonomía de Acceso Nicolas Lozano (7:00 AM)", sub: "Asegurar que pida el código VPN/DUO desde el teléfono de operaciones.", urgent: true },
+            { id: "e_d2", date: getTodayString(), title: "Actualización Bi-horaria de EQ & FP", sub: "Publicar resultados cada 2 horas hasta la salida.", urgent: true },
+            { id: "e_d3", date: getTodayString(), title: "Realizar 2-3 Auditorías QA por Agente (EQ & FP)", sub: "Auditar promesas de pago y calidad diariamente.", urgent: false },
+            { id: "e_d4", date: getTodayString(), title: "Revisar/Actualizar Hojas de Incentivos EQ & FP", sub: "Mantener los registros de incentivos al día.", urgent: false },
+            { id: "e_d5", date: getTodayString(), title: "Atender VTO / Overtime de inmediato", sub: "Tomar ofertas de capacidad en tiempo real.", urgent: true },
+            { id: "e_d6", date: getTodayString(), title: "Alineación de Agent Daily Status con David Urbino", sub: "Revisar métricas con David antes de enviar captura a WFM.", urgent: false },
+            { id: "e_d7", date: getTodayString(), title: "Atención a Google Chats (< 10 min de respuesta)", sub: "Asegurar respuesta inmediata a requerimientos en los chats.", urgent: true },
+            { id: "e_w1", date: "2026-10-12", title: "Envío de Horarios y Novedades a WFM (Cada Lunes)", sub: "Confirmar horarios e incluir novedades del mes.", urgent: true },
+            { id: "e_w2", date: "2026-10-14", title: "Sesión 1-a-1 de Coaching (15-60 min por agente)", sub: "Realizar y documentar sesión semanal por empleado.", urgent: false },
+            { id: "e_w3", date: "2026-10-16", title: "Actualización Sistema Thunder", sub: "Ingresar con credenciales de Adrian y actualizar métricas semanales.", urgent: false },
+            { id: "e_w4", date: "2026-10-16", title: "Gestión de Déficit Semanal de 13 Horas (EQ & FP)", sub: "Cubrir deficit pidiendo OT o ingresando a la línea.", urgent: true },
+            { id: "e_m1", date: "2026-10-28", title: "Desglose de Novedades y Facturación EQ & FP", sub: "Conciliar métricas y novedades del proyecto al cierre.", urgent: false },
+            { id: "e_m2", date: "2026-10-30", title: "Envío de Bonos e Incentivos a Finanzas (Fin de Octubre)", sub: "Enviar correo final de incentivos para pago en 2Q Noviembre.", urgent: true }
+        ]
+    },
+    david: {
+        id: "david",
+        name: "David Urbino",
+        role: "Operations Supervisor",
+        subtitle: "Supervisor OCA Telcom & MED & DISH",
+        isManager: false,
+        tasks: [
+            { id: "d_d1", date: getTodayString(), title: "Compartir VPN con Pablo y Brandon (7:00 AM)", sub: "Estar atento a las 7:00 AM para dar el código VPN.", urgent: true },
+            { id: "d_d2", date: getTodayString(), title: "Completar Agent Daily Status con Enmanuel", sub: "Consultar a Enmanuel antes de enviar captura a WFM.", urgent: false },
+            { id: "d_d3", date: getTodayString(), title: "Actualización diaria OCA Telcom y MED", sub: "Actualizar resultados diarios y compartir con el equipo.", urgent: false },
+            { id: "d_d4", date: getTodayString(), title: "Auditar 10 llamadas de DISH Spanish al día", sub: "Cumplir con las 10 auditorías diarias obligatorias.", urgent: true },
+            { id: "d_d5", date: getTodayString(), title: "Auditar 2-3 llamadas por agente en MED (Livevox)", sub: "Calidad diaria para el equipo de MED.", urgent: false }
+        ]
+    },
+    sergio: {
+        id: "sergio",
+        name: "Sergio Gonzalez",
+        role: "Operations Supervisor",
+        subtitle: "Responsable de Reportes y Estadísticas Operativas",
+        isManager: false,
+        tasks: [
+            { id: "s_d1", date: getTodayString(), title: "Generar Stats Diarias/Semanales/MTD (CRC_QC y CRCC_QC)", sub: "Completar al final del día.", urgent: true },
+            { id: "s_d2", date: getTodayString(), title: "Generar Stats Diarias/Semanales/MTD (Earthlink y Optimum)", sub: "Completar información diaria.", urgent: false }
+        ]
+    },
+    adrian: {
+        id: "adrian",
+        name: "Adrian Lopez",
+        role: "Operations Manager",
+        subtitle: "Líder de Operaciones Complete Recovery",
+        isManager: true,
+        tasks: [
+            { id: "a_d1", date: getTodayString(), title: "Revisar cumplimiento de SLA de Google Chats (<10 min)", sub: "Supervisar respuesta rápida en los chats.", urgent: true }
+        ]
+    }
+};
+
+let profiles = JSON.parse(localStorage.getItem("eqfp_profiles_v2")) || defaultProfiles;
+let currentUser = localStorage.getItem("eqfp_current_user") || "enmanuel";
+
+if (!profiles[currentUser]) currentUser = "enmanuel";
+
+let userTasks = JSON.parse(localStorage.getItem(`eqfp_calendar_tasks_v7_${currentUser}`)) || profiles[currentUser].tasks;
+let completedTasks = JSON.parse(localStorage.getItem(`eqfp_completed_v7_${currentUser}`)) || {};
+
+let ultimaHoraDisparada = null;
+let ultimoCierreNocheDisparado = null; // Control para ejecución única a las 10:30 PM
+
+function init() {
+    renderUserSelector();
+    document.getElementById("newTaskDate").value = getTodayString();
+    document.getElementById("dailyViewDate").value = getTodayString();
+    loadUserProfile();
+    startTimers();
+}
+
+function saveProfiles() {
+    localStorage.setItem("eqfp_profiles_v2", JSON.stringify(profiles));
+}
+
+function renderUserSelector() {
+    const selector = document.getElementById("userSelector");
+    selector.innerHTML = Object.keys(profiles).map(key => {
+        const p = profiles[key];
+        return `<option value="${p.id}">${p.name} (${p.role})</option>`;
+    }).join('');
+    selector.value = currentUser;
+}
+
+function changeUser() {
+    currentUser = document.getElementById("userSelector").value;
+    localStorage.setItem("eqfp_current_user", currentUser);
+    
+    userTasks = JSON.parse(localStorage.getItem(`eqfp_calendar_tasks_v7_${currentUser}`)) || (profiles[currentUser] ? profiles[currentUser].tasks : []);
+    completedTasks = JSON.parse(localStorage.getItem(`eqfp_completed_v7_${currentUser}`)) || {};
+    loadUserProfile();
+}
+
+function loadUserProfile() {
+    const profile = profiles[currentUser];
+    if (!profile) return;
+
+    document.getElementById("appTitle").innerText = `${profile.name} - Dashboard`;
+    document.getElementById("userRoleSubtitle").innerText = `${profile.role} | ${profile.subtitle}`;
+    
+    const btnManage = document.getElementById("btnManageTeam");
+    if (profile.isManager) {
+        btnManage.style.display = "inline-block";
+    } else {
+        btnManage.style.display = "none";
+    }
+
+    renderTasks();
+}
+
+function saveUserTasks() {
+    localStorage.setItem(`eqfp_calendar_tasks_v7_${currentUser}`, JSON.stringify(userTasks));
+    localStorage.setItem(`eqfp_completed_v7_${currentUser}`, JSON.stringify(completedTasks));
+}
+
+function getWeekNumber(d) {
+    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    return { week: weekNo, year: d.getUTCFullYear() };
+}
+
+// Calcular el siguiente día hábil (Lunes a Viernes)
+function getNextBusinessDay(dateString) {
+    let date = new Date(dateString + "T00:00:00");
+    let dayOfWeek = date.getDay(); // 0: Dom, 1: Lun, 2: Mar, 3: Mié, 4: Jue, 5: Vie, 6: Sáb
+
+    if (dayOfWeek === 5) {
+        date.setDate(date.getDate() + 3); // De viernes pasa a lunes
+    } else if (dayOfWeek === 6) {
+        date.setDate(date.getDate() + 2); // De sábado pasa a lunes
+    } else {
+        date.setDate(date.getDate() + 1); // Lunes a jueves pasa al siguiente día
+    }
+
+    return date.toISOString().split('T')[0];
+}
+
+// Ejecución de cierre y reagendamiento
+function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
+    const tasksForDay = userTasks.filter(t => t.date === fechaObjetivo);
+    const incompleteTasks = tasksForDay.filter(t => !completedTasks[t.id]);
+
+    if (incompleteTasks.length === 0) {
+        if (!esAutomatico) {
+            alert("¡Felicitaciones! Todas las tareas de hoy están completadas. No hay nada pendiente por reagendar.");
+        }
+        return;
+    }
+
+    const nextBusinessDay = getNextBusinessDay(fechaObjetivo);
+    const profile = profiles[currentUser];
+
+    // Mover las tareas pendientes al siguiente día hábil
+    incompleteTasks.forEach(task => {
+        task.date = nextBusinessDay;
+    });
+
+    saveUserTasks();
+
+    let listText = incompleteTasks.map(t => `• *${t.title}*`).join('\n');
+    let tituloAlerta = esAutomatico ? "🚨 *CIERRE NOCTURNO AUTOMÁTICO (10:30 PM)* 🚨" : "⚠️ *REAGENDAMIENTO AUTOMÁTICO DE TAREAS* ⚠️";
+
+    const msg = `${tituloAlerta}\n\nSupervisor: *${profile.name}*\nFecha Original: *${fechaObjetivo}*\nReagendadas para: *${nextBusinessDay}* (Siguiente Día Hábil)\n\nTareas Incompletas Reagendadas:\n${listText}\n\nLas tareas fueron reprogramadas en la agenda para su atención.`;
+
+    enviarAlertaGoogleChat(msg);
+    renderTasks();
+
+    if (!esAutomatico) {
+        alert(`Se enviaron las alertas a Google Chat y las ${incompleteTasks.length} tareas fueron movidas a la agenda del ${nextBusinessDay}.`);
+    }
+}
+
+function cerrarDiaYReagendarIncompletas() {
+    const selectedDate = document.getElementById("dailyViewDate").value;
+    ejecutarCierreYReagendamiento(selectedDate, false);
+}
+
+function renderTasks() {
+    renderDailyTab();
+    renderWeeklyTab();
+    renderMonthlyTab();
+    renderSummaryTab();
+}
+
+function renderDailyTab() {
+    const selectedDate = document.getElementById("dailyViewDate").value;
+    const container = document.getElementById("dailyTaskList");
+    const tasksForDay = userTasks.filter(t => t.date === selectedDate);
+
+    if (tasksForDay.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas agendadas para el día ${selectedDate}. Agrega una arriba.</div>`;
+        updateDailyProgress(0, 0);
+        return;
+    }
+
+    let doneCount = 0;
+    container.innerHTML = tasksForDay.map(task => {
+        const isChecked = completedTasks[task.id] ? "checked" : "";
+        const completedClass = completedTasks[task.id] ? "completed" : "";
+        const urgentClass = task.urgent ? "urgent" : "";
+        if (completedTasks[task.id]) doneCount++;
+
+        return `
+            <div class="task-item ${completedClass} ${urgentClass}">
+                <input type="checkbox" id="${task.id}" ${isChecked} onchange="toggleTask('${task.id}')">
+                <div class="task-details">
+                    <label for="${task.id}" class="task-title">
+                        ${task.title}
+                        ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
+                    </label>
+                    <div class="task-sub">${task.sub || ''}</div>
+                </div>
+                <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
+                <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Eliminar Tarea">🗑️</button>
+            </div>
+        `;
+    }).join('');
+
+    updateDailyProgress(doneCount, tasksForDay.length);
+}
+
+function renderWeeklyTab() {
+    const container = document.getElementById("weeklyContainer");
+    if (!userTasks || userTasks.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas en el sistema.</div>`;
+        return;
+    }
+
+    const weeksGroup = {};
+    userTasks.forEach(task => {
+        const taskDate = new Date((task.date || getTodayString()) + "T00:00:00");
+        const weekInfo = getWeekNumber(taskDate);
+        const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}`;
+
+        if (!weeksGroup[key]) weeksGroup[key] = [];
+        weeksGroup[key].push(task);
+    });
+
+    let html = "";
+    for (const weekTitle in weeksGroup) {
+        const tasks = weeksGroup[weekTitle];
+        const completedCount = tasks.filter(t => completedTasks[t.id]).length;
+
+        let taskItemsHtml = "";
+        tasks.forEach(task => {
+            const isChecked = completedTasks[task.id] ? "checked" : "";
+            const completedClass = completedTasks[task.id] ? "completed" : "";
+            const urgentClass = task.urgent ? "urgent" : "";
+
+            taskItemsHtml += `
+                <div class="task-item ${completedClass} ${urgentClass}">
+                    <input type="checkbox" id="w_${task.id}" ${isChecked} onchange="toggleTask('${task.id}')">
+                    <div class="task-details">
+                        <label for="w_${task.id}" class="task-title">
+                            ${task.title}
+                            <span class="task-date-badge">${task.date}</span>
+                            ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
+                        </label>
+                        <div class="task-sub">${task.sub || ''}</div>
+                    </div>
+                    <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
+                    <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Eliminar Tarea">🗑️</button>
+                </div>
+            `;
+        });
+
+        html += `
+            <div class="group-section">
+                <div class="group-header">
+                    <span>📅 ${weekTitle}</span>
+                    <span>${completedCount} / ${tasks.length} Completadas</span>
+                </div>
+                <div class="task-list">${taskItemsHtml}</div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+function renderMonthlyTab() {
+    const container = document.getElementById("monthlyContainer");
+    if (!userTasks || userTasks.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas en el sistema.</div>`;
+        return;
+    }
+
+    const monthsGroup = {};
+    userTasks.forEach(task => {
+        const parts = (task.date || getTodayString()).split('-');
+        const dateObj = new Date(parts[0], parts[1] - 1, 1);
+        const monthName = dateObj.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+        const key = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+        if (!monthsGroup[key]) monthsGroup[key] = [];
+        monthsGroup[key].push(task);
+    });
+
+    let html = "";
+    for (const monthTitle in monthsGroup) {
+        const tasks = monthsGroup[monthTitle];
+        const pendingCount = tasks.filter(t => !completedTasks[t.id]).length;
+
+        let taskItemsHtml = "";
+        tasks.forEach(task => {
+            const isChecked = completedTasks[task.id] ? "checked" : "";
+            const completedClass = completedTasks[task.id] ? "completed" : "";
+            const urgentClass = task.urgent ? "urgent" : "";
+
+            taskItemsHtml += `
+                <div class="task-item ${completedClass} ${urgentClass}">
+                    <input type="checkbox" id="m_${task.id}" ${isChecked} onchange="toggleTask('${task.id}')">
+                    <div class="task-details">
+                        <label for="m_${task.id}" class="task-title">
+                            ${task.title}
+                            <span class="task-date-badge">${task.date}</span>
+                            ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
+                        </label>
+                        <div class="task-sub">${task.sub || ''}</div>
+                    </div>
+                    <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
+                    <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Eliminar Tarea">🗑️</button>
+                </div>
+            `;
+        });
+
+        html += `
+            <div class="group-section">
+                <div class="group-header">
+                    <span>📌 ${monthTitle}</span>
+                    <span>${pendingCount} Pendientes de ${tasks.length} totales</span>
+                </div>
+                <div class="task-list">${taskItemsHtml}</div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+function renderSummaryTab() {
+    const container = document.getElementById("summaryContainer");
+    const filter = document.getElementById("summaryFilter") ? document.getElementById("summaryFilter").value : "all";
+
+    if (!userTasks || userTasks.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas registradas.</div>`;
+        return;
+    }
+
+    let filteredTasks = [...userTasks].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (filter === "pending") {
+        filteredTasks = filteredTasks.filter(t => !completedTasks[t.id]);
+    } else if (filter === "urgent") {
+        filteredTasks = filteredTasks.filter(t => t.urgent);
+    }
+
+    if (filteredTasks.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas que coincidan con el filtro.</div>`;
+        return;
+    }
+
+    let taskItemsHtml = "";
+    filteredTasks.forEach(task => {
+        const isChecked = completedTasks[task.id] ? "checked" : "";
+        const completedClass = completedTasks[task.id] ? "completed" : "";
+        const urgentClass = task.urgent ? "urgent" : "";
+
+        taskItemsHtml += `
+            <div class="task-item ${completedClass} ${urgentClass}">
+                <input type="checkbox" id="s_${task.id}" ${isChecked} onchange="toggleTask('${task.id}')">
+                <div class="task-details">
+                    <label for="s_${task.id}" class="task-title">
+                        ${task.title}
+                        <span class="task-date-badge">${task.date}</span>
+                        ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
+                    </label>
+                    <div class="task-sub">${task.sub || ''}</div>
+                </div>
+                <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
+                <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Eliminar Tarea">🗑️</button>
+            </div>
+        `;
+    });
+
+    container.innerHTML = `
+        <div class="group-section">
+            <div class="group-header">
+                <span>📊 Resumen Consolidado (${filteredTasks.length} Tareas)</span>
+            </div>
+            <div class="task-list">${taskItemsHtml}</div>
+        </div>
+    `;
+}
+
+function toggleTask(id) {
+    completedTasks[id] = !completedTasks[id];
+    saveUserTasks();
+    renderTasks();
+}
+
+function toggleUrgent(id) {
+    const task = userTasks.find(t => t.id === id);
+    if (task) {
+        task.urgent = !task.urgent;
+        saveUserTasks();
+        renderTasks();
+    }
+}
+
+function deleteTask(id) {
+    userTasks = userTasks.filter(t => t.id !== id);
+    delete completedTasks[id];
+    saveUserTasks();
+    renderTasks();
+}
+
+function addNewCustomTask() {
+    const title = document.getElementById("newTaskTitle").value.trim();
+    const sub = document.getElementById("newTaskSub").value.trim();
+    const date = document.getElementById("newTaskDate").value;
+    const isUrgent = document.getElementById("newTaskUrgent").checked;
+
+    if (!title || !date) {
+        alert("Por favor ingresa un nombre para la tarea y selecciona una fecha.");
+        return;
+    }
+
+    const newId = "task_" + Date.now();
+    userTasks.push({ id: newId, date: date, title: title, sub: sub, urgent: isUrgent });
+    saveUserTasks();
+    renderTasks();
+
+    document.getElementById("newTaskTitle").value = "";
+    document.getElementById("newTaskSub").value = "";
+    document.getElementById("newTaskUrgent").checked = false;
+}
+
+function updateDailyProgress(done, total) {
+    if (total === 0) {
+        document.getElementById("dailyProgressBar").style.width = `0%`;
+        document.getElementById("dailyProgressText").innerText = `0%`;
+        return;
+    }
+    const pct = Math.round((done / total) * 100);
+    document.getElementById("dailyProgressBar").style.width = `${pct}%`;
+    document.getElementById("dailyProgressText").innerText = `${pct}% (${done}/${total})`;
+}
+
+function resetAllDailyTasks() {
+    const selectedDate = document.getElementById("dailyViewDate").value;
+    const tasksForDay = userTasks.filter(t => t.date === selectedDate);
+    tasksForDay.forEach(t => completedTasks[t.id] = false);
+    saveUserTasks();
+    renderTasks();
+}
+
+function switchTab(tabId) {
+    document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(content => content.classList.remove("active"));
+
+    event.target.classList.add("active");
+    document.getElementById(tabId).classList.add("active");
+}
+
+function openTeamModal() {
+    renderSupervisorManageList();
+    populateSuccessorDropdown();
+    document.getElementById("teamModal").classList.add("active");
+}
+
+function closeTeamModal() {
+    document.getElementById("teamModal").classList.remove("active");
+}
+
+function populateSuccessorDropdown() {
+    const select = document.getElementById("transferSuccessorSelect");
+    select.innerHTML = Object.keys(profiles)
+        .filter(id => id !== currentUser)
+        .map(id => `<option value="${id}">${profiles[id].name} (${profiles[id].role})</option>`)
+        .join('');
+}
+
+function transferManagerRole() {
+    const successorId = document.getElementById("transferSuccessorSelect").value;
+    if (!successorId) {
+        alert("Selecciona a un supervisor de la lista para realizar el traspaso.");
+        return;
+    }
+
+    const currentManager = profiles[currentUser];
+    const successor = profiles[successorId];
+
+    if (confirm(`¿Confirmas el TRASPASO DE MANDO? \n\n${successor.name} asumirá el cargo de Operations Manager y ${currentManager.name} pasará a ser Operations Supervisor.`)) {
+        currentManager.isManager = false;
+        currentManager.role = "Operations Supervisor";
+
+        successor.isManager = true;
+        successor.role = "Operations Manager";
+
+        saveProfiles();
+
+        currentUser = successorId;
+        localStorage.setItem("eqfp_current_user", currentUser);
+
+        renderUserSelector();
+        changeUser();
+        closeTeamModal();
+
+        alert(`🎉 ¡Traspaso completado! ${successor.name} es el nuevo Operations Manager.`);
+    }
+}
+
+function renderSupervisorManageList() {
+    const container = document.getElementById("supervisorListContainer");
+    container.innerHTML = Object.keys(profiles).map(key => {
+        const p = profiles[key];
+        const deleteButton = p.isManager ? '<small style="color:var(--accent-warning); font-weight:bold;">👑 Operations Manager</small>' : `<button class="delete-btn" onclick="removeSupervisor('${p.id}')" title="Eliminar Supervisor">🗑️ Eliminar</button>`;
+        
+        return `
+            <div class="supervisor-manage-item">
+                <div>
+                    <strong>${p.name}</strong> (${p.role})
+                    <div style="font-size:0.8rem; color:var(--text-secondary);">${p.subtitle}</div>
+                </div>
+                <div>${deleteButton}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function addNewSupervisor() {
+    const name = document.getElementById("newSupName").value.trim();
+    const sub = document.getElementById("newSupSub").value.trim();
+
+    if (!name) {
+        alert("Por favor ingresa el nombre del nuevo supervisor o agente.");
+        return;
+    }
+
+    const newId = "sup_" + Date.now();
+    profiles[newId] = {
+        id: newId,
+        name: name,
+        role: "Operations Supervisor",
+        subtitle: sub || "Operations Supervisor",
+        isManager: false,
+        tasks: [
+            { id: newId + "_1", date: getTodayString(), title: "Revisar correo de alineación y operativas", sub: "Tarea inicial asignada.", urgent: false }
+        ]
+    };
+
+    saveProfiles();
+    renderUserSelector();
+    renderSupervisorManageList();
+    populateSuccessorDropdown();
+
+    document.getElementById("newSupName").value = "";
+    document.getElementById("newSupSub").value = "";
+    alert(`Miembro ${name} agregado con éxito.`);
+}
+
+function removeSupervisor(id) {
+    if (confirm(`¿Estás seguro de que deseas eliminar a ${profiles[id].name} del dashboard?`)) {
+        delete profiles[id];
+        saveProfiles();
+        
+        if (currentUser === id) currentUser = "adrian";
+        
+        renderUserSelector();
+        changeUser();
+        renderSupervisorManageList();
+        populateSuccessorDropdown();
+    }
+}
+
+async function enviarAlertaGoogleChat(textoMensaje) {
+    try {
+        await fetch(GCHAT_WEBHOOK_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json; charset=UTF-8" },
+            body: JSON.stringify({ text: textoMensaje }),
+            mode: "no-cors"
+        });
+    } catch (err) {
+        console.error("Error enviando alerta a Google Chat:", err);
+    }
+}
+
+function enviarAlertasUrgentesDelDia() {
+    const today = getTodayString();
+    const urgentToday = userTasks.filter(t => t.date === today && t.urgent && !completedTasks[t.id]);
+    const profile = profiles[currentUser];
+
+    if (urgentToday.length === 0) {
+        alert("No hay tareas urgentes pendientes para el día de hoy.");
+        return;
+    }
+
+    let listText = urgentToday.map(t => `• *${t.title}* (${t.sub || 'Sin detalle'})`).join('\n');
+    let msg = `🚨 *TAREAS URGENTES DEL DÍA* (${today}) 🚨\n\nSupervisor a cargo: *${profile.name}*\n\nPendientes prioritarios:\n${listText}\n\nPor favor atender a la brevedad.`;
+
+    enviarAlertaGoogleChat(msg);
+    alert("Alertas de tareas urgentes enviadas a Google Chat.");
+}
+
+function testChatWebhook() {
+    const profile = profiles[currentUser];
+    enviarAlertaGoogleChat(`🤖 *Prueba del Sistema*: Alerta enviada por ${profile.name} (${profile.role}).`);
+    alert("Mensaje de prueba enviado.");
+}
+
+function publicarYReiniciarBihorario() {
+    const profile = profiles[currentUser];
+    const msg = `📊 *RECORDATORIO DE RESULTADOS*: ${profile.name} ha emitido un recordatorio para publicar resultados bi-horarios.`;
+    enviarAlertaGoogleChat(msg);
+    alert("Recordatorio bi-horario enviado a Google Chat.");
+}
+
+function enviarAlertaLunesWFM() {
+    const msg = "📅 *RECORDATORIO SEMANAL WFM*: @David Urbino @Enmanuel Prada Recuerden enviar el correo de horarios y novedades del mes a WFM.";
+    enviarAlertaGoogleChat(msg);
+    alert("Recordatorio WFM enviado a Google Chat.");
+}
+
+function startTimers() {
+    updateRealTimeTimers();
+    setInterval(updateRealTimeTimers, 1000);
+}
+
+function updateRealTimeTimers() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    // 1. Alerta bi-horaria en minuto 0 de horas impares
+    if (currentHour >= 9 && currentHour % 2 === 1 && currentMinute === 0) {
+        if (ultimaHoraDisparada !== currentHour) {
+            ultimaHoraDisparada = currentHour;
+            publicarAlertaBihorariaAutomatica();
+        }
+    }
+
+    // 2. DETECCIÓN AUTOMÁTICA DE CIERRE A LAS 10:30 PM (22:30 HS)
+    if (currentHour === 22 && currentMinute === 30) {
+        const todayStr = getTodayString();
+        if (ultimoCierreNocheDisparado !== todayStr) {
+            ultimoCierreNocheDisparado = todayStr;
+            ejecutarCierreYReagendamiento(todayStr, true);
+        }
+    }
+
+    const nextBiHourlyTarget = getNextBiHourlyTarget(now);
+    const biHourlyDiffMs = nextBiHourlyTarget - now;
+    document.getElementById("bihourlyTimer").innerText = formatTimeMs(biHourlyDiffMs);
+
+    let chatTargetTime = localStorage.getItem("eqfp_chat_target_time");
+    if (!chatTargetTime) {
+        resetChatTimer();
+        chatTargetTime = localStorage.getItem("eqfp_chat_target_time");
+    }
+
+    const chatDiffMs = parseInt(chatTargetTime) - now.getTime();
+    if (chatDiffMs <= 0) {
+        document.getElementById("chatTimer").innerText = "00:00 (SLA VENCIDO)";
+        document.getElementById("chatTimer").style.color = "var(--accent-danger)";
+    } else {
+        document.getElementById("chatTimer").innerText = formatTimeMs(chatDiffMs, false);
+        document.getElementById("chatTimer").style.color = "var(--accent-blue)";
+    }
+}
+
+function getNextBiHourlyTarget(now) {
+    const target = new Date(now);
+    const currentHour = now.getHours();
+
+    if (currentHour < 9) {
+        target.setHours(9, 0, 0, 0);
+        return target;
+    }
+
+    let nextHour;
+    if (currentHour % 2 === 1) {
+        nextHour = currentHour + 2;
+    } else {
+        nextHour = currentHour + 1;
+    }
+
+    target.setHours(nextHour, 0, 0, 0);
+    return target;
+}
+
+function publicarAlertaBihorariaAutomatica() {
+    const profile = profiles[currentUser];
+    const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const msg = `🚨 *ALERTA BI-HORARIA AUTOMÁTICA* (${horaActual}) 🚨\n\n*${profile.name}*, ha llegado la hora de publicar los resultados de EQ & FP en los chats correspondientes.`;
+    
+    enviarAlertaGoogleChat(msg);
+}
+
+function resetChatTimer() {
+    const targetTime = new Date().getTime() + (10 * 60 * 1000);
+    localStorage.setItem("eqfp_chat_target_time", targetTime);
+    updateRealTimeTimers();
+}
+
+function formatTimeMs(ms, includeHours = true) {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const pad = num => num.toString().padStart(2, '0');
+
+    if (includeHours) {
+        return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    } else {
+        return `${pad(minutes)}:${pad(seconds)}`;
+    }
+}
+
+window.onload = init;
