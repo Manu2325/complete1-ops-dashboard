@@ -191,36 +191,56 @@ function getNextBusinessDay(dateString) {
     return date.toISOString().split('T')[0];
 }
 
+// Ejecución de cierre y reagendamiento para TODOS los usuarios de la base de datos
 function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
-    const tasksForDay = userTasks.filter(t => t.date === fechaObjetivo);
-    const incompleteTasks = tasksForDay.filter(t => !completedTasks[t.id]);
-
-    if (incompleteTasks.length === 0) {
-        if (!esAutomatico) {
-            alert("¡Felicitaciones! Todas las tareas de hoy están completadas. No hay nada pendiente por reagendar.");
-        }
-        return;
-    }
-
     const nextBusinessDay = getNextBusinessDay(fechaObjetivo);
-    const profile = profiles[currentUser];
+    let resumenAlertas = [];
 
-    incompleteTasks.forEach(task => {
-        task.date = nextBusinessDay;
+    // Si es automático (10:30 PM), iteramos por TODOS los perfiles registrados en Firebase
+    const usuariosAProcesar = esAutomatico ? Object.keys(profiles) : [currentUser];
+
+    usuariosAProcesar.forEach(userId => {
+        const userProfile = profiles[userId];
+        
+        // Consultar o usar las tareas en memoria del usuario
+        db.ref(`tasks/${userId}`).once("value", snapshot => {
+            const data = snapshot.val() || {};
+            let userTasksList = data.userTasks || (userProfile ? userProfile.tasks || [] : []);
+            let userCompletedDict = data.completedTasks || {};
+
+            const tasksForDay = userTasksList.filter(t => t.date === fechaObjetivo);
+            const incompleteTasks = tasksForDay.filter(t => !userCompletedDict[t.id]);
+
+            if (incompleteTasks.length > 0) {
+                // Mover fechas de tareas incompletas al siguiente día hábil
+                incompleteTasks.forEach(task => {
+                    task.date = nextBusinessDay;
+                });
+
+                // Guardar cambios actualizados en Firebase para ese usuario
+                db.ref(`tasks/${userId}`).set({
+                    userTasks: userTasksList,
+                    completedTasks: userCompletedDict
+                });
+
+                let listText = incompleteTasks.map(t => `• *${t.title}*`).join('\n');
+                resumenAlertas.push(`👤 *${userProfile.name}* (${userProfile.role}):\n${listText}`);
+            }
+        });
     });
 
-    saveUserTasksInCloud();
+    // Enviar una única alerta consolidada a Google Chat si hubieron pendientes
+    setTimeout(() => {
+        if (resumenAlertas.length > 0) {
+            let tituloAlerta = esAutomatico ? "🚨 *CIERRE NOCTURNO AUTOMÁTICO (10:30 PM)* 🚨" : "⚠️ *REAGENDAMIENTO AUTOMÁTICO DE TAREAS* ⚠️";
+            
+            const msg = `${tituloAlerta}\n\nFecha Original: *${fechaObjetivo}*\nReagendadas para: *${nextBusinessDay}* (Siguiente Día Hábil)\n\n*Resumen de Tareas Incompletas Reagendadas:*\n\n${resumenAlertas.join('\n\n')}\n\nLas tareas fueron reprogramadas en la agenda de cada usuario.`;
 
-    let listText = incompleteTasks.map(t => `• *${t.title}*`).join('\n');
-    let tituloAlerta = esAutomatico ? "🚨 *CIERRE NOCTURNO AUTOMÁTICO (10:30 PM)* 🚨" : "⚠️ *REAGENDAMIENTO AUTOMÁTICO DE TAREAS* ⚠️";
-
-    const msg = `${tituloAlerta}\n\nSupervisor: *${profile.name}*\nFecha Original: *${fechaObjetivo}*\nReagendadas para: *${nextBusinessDay}* (Siguiente Día Hábil)\n\nTareas Incompletas Reagendadas:\n${listText}\n\nLas tareas fueron reprogramadas en la agenda para su atención.`;
-
-    enviarAlertaGoogleChat(msg);
-
-    if (!esAutomatico) {
-        alert(`Se enviaron las alertas a Google Chat y las ${incompleteTasks.length} tareas fueron movidas a la agenda del ${nextBusinessDay}.`);
-    }
+            enviarAlertaGoogleChat(msg);
+        } else if (!esAutomatico) {
+            alert("¡Felicitaciones! Todas las tareas de hoy están completadas. No hay nada pendiente por reagendar.");
+        }
+    }, 1500); // Pequeña espera para sincronización completa con Firebase
 }
 
 function cerrarDiaYReagendarIncompletas() {
