@@ -14,7 +14,6 @@ const firebaseConfig = {
 // Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 
-// FORZAR CONEXIÓN ESTABLE SIN ERRORES DE WEBSOCKET
 try {
     firebase.database().INTERNAL.forceLongPolling();
 } catch (e) {
@@ -100,7 +99,6 @@ function init() {
     document.getElementById("newTaskDate").value = getTodayString();
     document.getElementById("dailyViewDate").value = getTodayString();
 
-    // Escuchar cambios de perfiles en tiempo real desde Firebase
     db.ref("profiles").on("value", snapshot => {
         const val = snapshot.val();
         if (val) {
@@ -199,6 +197,25 @@ function getNextBusinessDay(dateString) {
     return date.toISOString().split('T')[0];
 }
 
+// FUNCIÓN DE ORDENAMIENTO DE PRIORIDAD:
+// 1° Pendientes Urgentes | 2° Pendientes Normales | 3° Completadas
+function sortTasksByPriority(tasksArray) {
+    return [...tasksArray].sort((a, b) => {
+        const aCompleted = !!completedTasks[a.id];
+        const bCompleted = !!completedTasks[b.id];
+
+        if (aCompleted !== bCompleted) {
+            return aCompleted ? 1 : -1;
+        }
+
+        if (a.urgent !== b.urgent) {
+            return a.urgent ? -1 : 1;
+        }
+
+        return 0;
+    });
+}
+
 function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
     const nextBusinessDay = getNextBusinessDay(fechaObjetivo);
     let resumenAlertas = [];
@@ -260,16 +277,19 @@ function renderTasks() {
 function renderDailyTab() {
     const selectedDate = document.getElementById("dailyViewDate").value;
     const container = document.getElementById("dailyTaskList");
-    const tasksForDay = userTasks.filter(t => t.date === selectedDate);
+    const rawTasksForDay = userTasks.filter(t => t.date === selectedDate);
 
-    if (tasksForDay.length === 0) {
+    if (rawTasksForDay.length === 0) {
         container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas agendadas para el día ${selectedDate}. Agrega una arriba.</div>`;
         updateDailyProgress(0, 0);
         return;
     }
 
+    // APLICAR ORDENAMIENTO INTELIGENTE DE PRIORIDAD
+    const sortedTasks = sortTasksByPriority(rawTasksForDay);
+
     let doneCount = 0;
-    container.innerHTML = tasksForDay.map(task => {
+    container.innerHTML = sortedTasks.map(task => {
         const isChecked = completedTasks[task.id] ? "checked" : "";
         const completedClass = completedTasks[task.id] ? "completed" : "";
         const urgentClass = task.urgent ? "urgent" : "";
@@ -291,7 +311,7 @@ function renderDailyTab() {
         `;
     }).join('');
 
-    updateDailyProgress(doneCount, tasksForDay.length);
+    updateDailyProgress(doneCount, rawTasksForDay.length);
 }
 
 function renderWeeklyTab() {
@@ -313,11 +333,12 @@ function renderWeeklyTab() {
 
     let html = "";
     for (const weekTitle in weeksGroup) {
-        const tasks = weeksGroup[weekTitle];
-        const completedCount = tasks.filter(t => completedTasks[t.id]).length;
+        const rawTasks = weeksGroup[weekTitle];
+        const sortedTasks = sortTasksByPriority(rawTasks);
+        const completedCount = rawTasks.filter(t => completedTasks[t.id]).length;
 
         let taskItemsHtml = "";
-        tasks.forEach(task => {
+        sortedTasks.forEach(task => {
             const isChecked = completedTasks[task.id] ? "checked" : "";
             const completedClass = completedTasks[task.id] ? "completed" : "";
             const urgentClass = task.urgent ? "urgent" : "";
@@ -343,7 +364,7 @@ function renderWeeklyTab() {
             <div class="group-section">
                 <div class="group-header">
                     <span>📅 ${weekTitle}</span>
-                    <span>${completedCount} / ${tasks.length} Completadas</span>
+                    <span>${completedCount} / ${rawTasks.length} Completadas</span>
                 </div>
                 <div class="task-list">${taskItemsHtml}</div>
             </div>
@@ -373,11 +394,12 @@ function renderMonthlyTab() {
 
     let html = "";
     for (const monthTitle in monthsGroup) {
-        const tasks = monthsGroup[monthTitle];
-        const pendingCount = tasks.filter(t => !completedTasks[t.id]).length;
+        const rawTasks = monthsGroup[monthTitle];
+        const sortedTasks = sortTasksByPriority(rawTasks);
+        const pendingCount = rawTasks.filter(t => !completedTasks[t.id]).length;
 
         let taskItemsHtml = "";
-        tasks.forEach(task => {
+        sortedTasks.forEach(task => {
             const isChecked = completedTasks[task.id] ? "checked" : "";
             const completedClass = completedTasks[task.id] ? "completed" : "";
             const urgentClass = task.urgent ? "urgent" : "";
@@ -403,7 +425,7 @@ function renderMonthlyTab() {
             <div class="group-section">
                 <div class="group-header">
                     <span>📌 ${monthTitle}</span>
-                    <span>${pendingCount} Pendientes de ${tasks.length} totales</span>
+                    <span>${pendingCount} Pendientes de ${rawTasks.length} totales</span>
                 </div>
                 <div class="task-list">${taskItemsHtml}</div>
             </div>
@@ -422,7 +444,7 @@ function renderSummaryTab() {
         return;
     }
 
-    let filteredTasks = [...userTasks].sort((a, b) => new Date(a.date) - new Date(b.date));
+    let filteredTasks = [...userTasks];
 
     if (filter === "pending") {
         filteredTasks = filteredTasks.filter(t => !completedTasks[t.id]);
@@ -435,8 +457,11 @@ function renderSummaryTab() {
         return;
     }
 
+    // APLICAR ORDENAMIENTO
+    const sortedTasks = sortTasksByPriority(filteredTasks);
+
     let taskItemsHtml = "";
-    filteredTasks.forEach(task => {
+    sortedTasks.forEach(task => {
         const isChecked = completedTasks[task.id] ? "checked" : "";
         const completedClass = completedTasks[task.id] ? "completed" : "";
         const urgentClass = task.urgent ? "urgent" : "";
