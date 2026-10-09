@@ -13,6 +13,14 @@ const firebaseConfig = {
 
 // Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
+
+// FORZAR CONEXIÓN ESTABLE SIN ERRORES DE WEBSOCKET
+try {
+    firebase.database().INTERNAL.forceLongPolling();
+} catch (e) {
+    console.log("Long polling fallback configurado");
+}
+
 const db = firebase.database();
 
 function getTodayString() {
@@ -191,18 +199,15 @@ function getNextBusinessDay(dateString) {
     return date.toISOString().split('T')[0];
 }
 
-// Ejecución de cierre y reagendamiento para TODOS los usuarios de la base de datos
 function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
     const nextBusinessDay = getNextBusinessDay(fechaObjetivo);
     let resumenAlertas = [];
 
-    // Si es automático (10:30 PM), iteramos por TODOS los perfiles registrados en Firebase
     const usuariosAProcesar = esAutomatico ? Object.keys(profiles) : [currentUser];
 
     usuariosAProcesar.forEach(userId => {
         const userProfile = profiles[userId];
         
-        // Consultar o usar las tareas en memoria del usuario
         db.ref(`tasks/${userId}`).once("value", snapshot => {
             const data = snapshot.val() || {};
             let userTasksList = data.userTasks || (userProfile ? userProfile.tasks || [] : []);
@@ -212,12 +217,10 @@ function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
             const incompleteTasks = tasksForDay.filter(t => !userCompletedDict[t.id]);
 
             if (incompleteTasks.length > 0) {
-                // Mover fechas de tareas incompletas al siguiente día hábil
                 incompleteTasks.forEach(task => {
                     task.date = nextBusinessDay;
                 });
 
-                // Guardar cambios actualizados en Firebase para ese usuario
                 db.ref(`tasks/${userId}`).set({
                     userTasks: userTasksList,
                     completedTasks: userCompletedDict
@@ -229,7 +232,6 @@ function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
         });
     });
 
-    // Enviar una única alerta consolidada a Google Chat si hubieron pendientes
     setTimeout(() => {
         if (resumenAlertas.length > 0) {
             let tituloAlerta = esAutomatico ? "🚨 *CIERRE NOCTURNO AUTOMÁTICO (10:30 PM)* 🚨" : "⚠️ *REAGENDAMIENTO AUTOMÁTICO DE TAREAS* ⚠️";
@@ -240,7 +242,7 @@ function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
         } else if (!esAutomatico) {
             alert("¡Felicitaciones! Todas las tareas de hoy están completadas. No hay nada pendiente por reagendar.");
         }
-    }, 1500); // Pequeña espera para sincronización completa con Firebase
+    }, 1500);
 }
 
 function cerrarDiaYReagendarIncompletas() {
