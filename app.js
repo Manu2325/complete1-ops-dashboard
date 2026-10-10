@@ -321,49 +321,104 @@ function renderWeeklyTab() {
         return;
     }
 
-    const selectedDate = document.getElementById("dailyViewDate").value;
-    const rawTasks = userTasks.filter(t => isTaskActiveForDate(t, selectedDate) || t.frequency === "weekly");
-    
-    if (rawTasks.length === 0) {
-        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas esta semana.</div>`;
+    // Calcular semana actual y las 2 semanas siguientes
+    const today = new Date();
+    const currentWeekInfo = getWeekNumber(today);
+    const currentWeekNum = currentWeekInfo.week;
+    const currentYear = currentWeekInfo.year;
+
+    // Permitir semana actual + 2 semanas a futuro (máximo 3 semanas)
+    const allowedWeeks = [
+        currentWeekNum,
+        currentWeekNum + 1,
+        currentWeekNum + 2
+    ];
+
+    const weeksGroup = {};
+
+    userTasks.forEach(task => {
+        let taskDateStr = task.date;
+        
+        if (task.frequency === "weekly" && task.dayOfWeek) {
+            const now = new Date();
+            const currentDay = now.getDay() || 7;
+            const targetDay = parseInt(task.dayOfWeek);
+            let diff = targetDay - currentDay;
+            const tempDate = new Date();
+            tempDate.setDate(now.getDate() + diff);
+            taskDateStr = tempDate.toISOString().split('T')[0];
+        }
+
+        if (!taskDateStr) taskDateStr = getTodayString();
+
+        const taskDate = new Date(taskDateStr + "T00:00:00");
+        const weekInfo = getWeekNumber(taskDate);
+
+        // FILTRO: Mostrar solo si es del año actual y está dentro del rango de 3 semanas (actual + 2 futuras)
+        if (weekInfo.year === currentYear && allowedWeeks.includes(weekInfo.week)) {
+            const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}` + (weekInfo.week === currentWeekNum ? " (Semana Actual)" : "");
+
+            if (!weeksGroup[key]) weeksGroup[key] = [];
+            weeksGroup[key].push({ ...task, displayDate: taskDateStr });
+        }
+    });
+
+    if (Object.keys(weeksGroup).length === 0) {
+        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas agendadas para la semana actual ni las próximas 2 semanas.</div>`;
         return;
     }
 
-    const sortedTasks = sortTasksByPriority(rawTasks);
+    let html = "";
+    for (const weekTitle in weeksGroup) {
+        const rawTasks = weeksGroup[weekTitle];
+        const sortedTasks = sortTasksByPriority(rawTasks);
+        
+        let completedCount = 0;
+        sortedTasks.forEach(t => {
+            if (completedTasks[`${t.id}_${t.displayDate}`]) completedCount++;
+        });
 
-    let taskItemsHtml = "";
-    sortedTasks.forEach(task => {
-        const instanceId = `${task.id}_${selectedDate}`;
-        const isChecked = completedTasks[instanceId] ? "checked" : "";
-        const completedClass = completedTasks[instanceId] ? "completed" : "";
-        const urgentClass = task.urgent ? "urgent" : "";
+        let taskItemsHtml = "";
+        sortedTasks.forEach(task => {
+            const instanceId = `${task.id}_${task.displayDate}`;
+            const isChecked = completedTasks[instanceId] ? "checked" : "";
+            const completedClass = completedTasks[instanceId] ? "completed" : "";
+            const urgentClass = task.urgent ? "urgent" : "";
 
-        taskItemsHtml += `
-            <div class="task-item ${completedClass} ${urgentClass}">
-                <input type="checkbox" id="w_${instanceId}" ${isChecked} onchange="toggleTask('${instanceId}')">
-                <div class="task-details">
-                    <label for="w_${instanceId}" class="task-title">
-                        ${task.title}
-                        <span class="task-date-badge">${task.date || 'Recurrente'}</span>
-                        ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
-                    </label>
-                    <div class="task-sub">${task.sub || ''}</div>
+            let freqBadge = "";
+            if (task.frequency === "weekly") freqBadge = '<span class="task-date-badge" style="background: rgba(245, 158, 11, 0.2); color: var(--accent-warning);">🔁 Semanal</span>';
+            if (task.frequency === "monthly") freqBadge = '<span class="task-date-badge" style="background: rgba(34, 197, 94, 0.2); color: var(--accent-green);">🗓️ Mensual</span>';
+
+            taskItemsHtml += `
+                <div class="task-item ${completedClass} ${urgentClass}">
+                    <input type="checkbox" id="w_${instanceId}" ${isChecked} onchange="toggleTask('${instanceId}')">
+                    <div class="task-details">
+                        <label for="w_${instanceId}" class="task-title">
+                            ${task.title}
+                            <span class="task-date-badge">${task.displayDate}</span>
+                            ${freqBadge}
+                            ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
+                        </label>
+                        <div class="task-sub">${task.sub || ''}</div>
+                    </div>
+                    <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
+                    <button class="delete-btn" onclick="deleteTask('${task.id}', '${task.displayDate}')" title="Eliminar Tarea">🗑️</button>
                 </div>
-                <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
-                <button class="delete-btn" onclick="deleteTask('${task.id}', '${selectedDate}')" title="Eliminar Tarea">🗑️</button>
+            `;
+        });
+
+        html += `
+            <div class="group-section">
+                <div class="group-header">
+                    <span>📅 ${weekTitle}</span>
+                    <span>${completedCount} / ${rawTasks.length} Completadas</span>
+                </div>
+                <div class="task-list">${taskItemsHtml}</div>
             </div>
         `;
-    });
+    }
 
-    container.innerHTML = `
-        <div class="group-section">
-            <div class="group-header">
-                <span>📅 Vista Semanal</span>
-                <span>${rawTasks.length} Tareas Registradas</span>
-            </div>
-            <div class="task-list">${taskItemsHtml}</div>
-        </div>
-    `;
+    container.innerHTML = html;
 }
 
 function renderMonthlyTab() {
