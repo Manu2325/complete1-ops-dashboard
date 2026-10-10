@@ -342,7 +342,6 @@ function renderWeeklyTab() {
     const currentWeekNum = currentWeekInfo.week;
     const currentYear = currentWeekInfo.year;
 
-    // Rango de semanas visibles (Semana Actual, Semana +1, Semana +2)
     const allowedWeeks = [
         currentWeekNum,
         currentWeekNum + 1,
@@ -353,7 +352,6 @@ function renderWeeklyTab() {
 
     userTasks.forEach(task => {
         if (task.frequency === "weekly" && task.dayOfWeek) {
-            // TAREAS SEMANALES RECURRENTES
             allowedWeeks.forEach(weekNum => {
                 const now = new Date();
                 const currentDay = now.getDay() || 7;
@@ -376,7 +374,6 @@ function renderWeeklyTab() {
                 }
             });
         } else if (task.frequency === "monthly" && task.dayOfMonth) {
-            // TAREAS MENSUALES RECURRENTES: CALCULAR FECHA REAL DEL MES EN CURSO
             const year = today.getFullYear();
             const month = today.getMonth();
             const targetDate = new Date(year, month, parseInt(task.dayOfMonth));
@@ -385,7 +382,6 @@ function renderWeeklyTab() {
             if (!task.excludedDates || !task.excludedDates.includes(taskDateStr)) {
                 const weekInfo = getWeekNumber(targetDate);
 
-                // Solo mostrar en la vista semanal si la semana de la tarea está dentro del rango visible
                 if (weekInfo.year === currentYear && allowedWeeks.includes(weekInfo.week)) {
                     const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}` + (weekInfo.week === currentWeekNum ? " (Semana Actual)" : "");
 
@@ -394,7 +390,6 @@ function renderWeeklyTab() {
                 }
             }
         } else {
-            // TAREAS ÚNICAS (ONE-TIME)
             let taskDateStr = task.date || getTodayString();
             if (!task.excludedDates || !task.excludedDates.includes(taskDateStr)) {
                 const taskDate = new Date(taskDateStr + "T00:00:00");
@@ -538,7 +533,6 @@ function renderMonthlyTab() {
     for (const monthTitle in monthsGroup) {
         const rawTasks = monthsGroup[monthTitle];
 
-        // ORDENAMIENTO CORRECTO: 1° Pendientes Urgentes | 2° Pendientes Normales | 3° Completadas (Agrupadas abajo)
         rawTasks.sort((a, b) => {
             const aInstanceId = `${a.id}_${a.displayDate}`;
             const bInstanceId = `${b.id}_${b.displayDate}`;
@@ -616,7 +610,6 @@ function renderSummaryTab() {
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
 
-    // PROYECTAR TODAS LAS TAREAS (ÚNICAS, SEMANALES Y MENSUALES) PARA EL RESUMEN GENERAL
     userTasks.forEach(task => {
         if (task.frequency === "weekly" && task.dayOfWeek) {
             const targetDay = parseInt(task.dayOfWeek);
@@ -661,7 +654,6 @@ function renderSummaryTab() {
         return;
     }
 
-    // ORDENAR: 1° Pendientes Urgentes | 2° Pendientes Normales | 3° Completadas
     filteredTasks.sort((a, b) => {
         const aInstanceId = `${a.id}_${a.displayDate}`;
         const bInstanceId = `${b.id}_${b.displayDate}`;
@@ -1088,6 +1080,7 @@ function formatTimeMs(ms, includeHours = true) {
     }
 }
 
+// LÓGICA DE CIERRE Y REAGENDAMIENTO MEJORADA (Soporta tareas únicas y recurrentes)
 function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
     const nextBusinessDay = getNextBusinessDay(fechaObjetivo);
     let resumenAlertas = [];
@@ -1107,8 +1100,23 @@ function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
 
             if (incompleteTasks.length > 0) {
                 incompleteTasks.forEach(task => {
-                    if (task.frequency === "once") {
+                    const freq = task.frequency || "once";
+                    if (freq === "once") {
+                        // Tarea de única vez: Mover directamente la fecha al siguiente día hábil
                         task.date = nextBusinessDay;
+                    } else {
+                        // Tarea recurrente (Weekly/Monthly): Crear arrastre para el siguiente día hábil
+                        const carryOverId = `carry_${task.id}_${nextBusinessDay}`;
+                        if (!userTasksList.some(t => t.id === carryOverId)) {
+                            userTasksList.push({
+                                id: carryOverId,
+                                frequency: "once",
+                                date: nextBusinessDay,
+                                title: `📌 [REAGENDADA] ${task.title}`,
+                                sub: task.sub || "Tarea pendiente del día anterior",
+                                urgent: task.urgent
+                            });
+                        }
                     }
                 });
 
