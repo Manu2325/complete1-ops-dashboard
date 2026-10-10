@@ -1,0 +1,90 @@
+name: Cierre Nocturno Automático de Tareas (10:30 PM)
+
+on:
+  schedule:
+    # Corre de Lunes a Viernes a las 10:30 PM (Hora de Colombia/Ecuador/Perú - UTC-5)
+    - cron: '30 3 * * 2-6'
+  workflow_dispatch: # Permite probarlo manualmente desde GitHub si se desea
+
+jobs:
+  ejecutar-cierre:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ejecutar Reagendamiento en Firebase
+        run: |
+          node -e '
+          const https = require("https");
+
+          const GCHAT_WEBHOOK = "https://chat.googleapis.com/v1/spaces/AAQAW2t94sc/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=2GZ-2ChSl1mMEhgh7uxocoMdZt07sC-3qki7uPKIPNs";
+          const FIREBASE_DB_URL = "https://operational-task-manager-default-rtdb.firebaseio.com";
+
+          function request(url, options = {}, data = null) {
+              return new Promise((resolve, reject) => {
+                  const req = https.request(url, options, res => {
+                      let body = "";
+                      res.on("data", chunk => body += chunk);
+                      res.on("end", () => resolve(body ? JSON.parse(body) : {}));
+                  });
+                  req.on("error", reject);
+                  if (data) req.write(JSON.stringify(data));
+                  req.end();
+              });
+          }
+
+          function getNextBusinessDay(dateStr) {
+              let date = new Date(dateStr + "T00:00:00Z");
+              let day = date.getUTCDay();
+              if (day === 5) date.setUTCDate(date.getUTCDate() + 3); // Viernes a Lunes
+              else if (day === 6) date.setUTCDate(date.getUTCDate() + 2); // Sábado a Lunes
+              else date.setUTCDate(date.getUTCDate() + 1);
+              return date.toISOString().split("T")[0];
+          }
+
+          async function main() {
+              const todayStr = new Date().toISOString().split("T")[0];
+              const nextBusinessDay = getNextBusinessDay(todayStr);
+
+              console.log(`Procesando cierre para ${todayStr}. Siguiente día hábil: ${nextBusinessDay}`);
+
+              const profiles = await request(`${FIREBASE_DB_URL}/profiles.json`);
+              if (!profiles) return console.log("No se encontraron perfiles.");
+
+              let resumenAlertas = [];
+
+              for (const userId of Object.keys(profiles)) {
+                  const userProfile = profiles[userId];
+                  const tasksData = await request(`${FIREBASE_DB_URL}/tasks/${userId}.json`) || {};
+                  let userTasks = tasksData.userTasks || (userProfile ? userProfile.tasks || [] : []);
+                  let completedTasks = tasksData.completedTasks || {};
+
+                  const pending = userTasks.filter(t => t.date === todayStr && !completedTasks[t.id]);
+
+                  if (pending.length > 0) {
+                      pending.forEach(t => t.date = nextBusinessDay);
+
+                      await request(`${FIREBASE_DB_URL}/tasks/${userId}.json`, { method: "PUT" }, {
+                          userTasks: userTasks,
+                          completedTasks: completedTasks
+                      });
+
+                      let listText = pending.map(t => `• *${t.title}*`).join("\n");
+                      resumenAlertas.push(`👤 *${userProfile.name}* (${userProfile.role}):\n${listText}`);
+                  }
+              }
+
+              if (resumenAlertas.length > 0) {
+                  const msg = `🚨 *CIERRE NOCTURNO AUTOMÁTICO (10:30 PM)* 🚨\n\nFecha Original: *${todayStr}*\nReagendadas para: *${nextBusinessDay}* (Siguiente Día Hábil)\n\n*Resumen de Tareas Incompletas Reagendadas:*\n\n${resumenAlertas.join("\n\n")}\n\nLas tareas fueron reprogramadas en la agenda de cada usuario.`;
+
+                  await request(GCHAT_WEBHOOK, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json; charset=UTF-8" }
+                  }, { text: msg });
+
+                  console.log("Alerta enviada a Google Chat con éxito.");
+              } else {
+                  console.log("No hay tareas pendientes por reagendar.");
+              }
+          }
+
+          main().catch(console.error);
+          '
