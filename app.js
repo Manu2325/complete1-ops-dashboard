@@ -439,24 +439,19 @@ function renderMonthlyTab() {
 
     userTasks.forEach(task => {
         if (task.frequency === "weekly" && task.dayOfWeek) {
-            // PROYECTAR LA TAREA SEMANAL EN TODOS LOS DÍAS CORRESPONDIENTES DEL MES ACTUAL Y PRÓXIMOS MESES
-            const targetDay = parseInt(task.dayOfWeek); // 1: Lun, 2: Mar, ..., 5: Vie
+            const targetDay = parseInt(task.dayOfWeek);
 
             for (let monthOffset = 0; monthOffset < 2; monthOffset++) {
                 const year = now.getFullYear();
                 const month = now.getMonth() + monthOffset;
-                
-                // Obtener total de días del mes
                 const daysInMonth = new Date(year, month + 1, 0).getDate();
 
                 for (let d = 1; d <= daysInMonth; d++) {
                     const tempDate = new Date(year, month, d);
-                    const dayOfWeekNum = tempDate.getDay() || 7; // Convertir Domingo (0) a 7
+                    const dayOfWeekNum = tempDate.getDay() || 7;
 
                     if (dayOfWeekNum === targetDay) {
                         const dateStr = tempDate.toISOString().split('T')[0];
-                        
-                        // Si la fecha específica no está excluida
                         if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
                             const monthName = tempDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
                             const key = monthName.charAt(0).toUpperCase() + monthName.slice(1);
@@ -468,7 +463,6 @@ function renderMonthlyTab() {
                 }
             }
         } else if (task.frequency === "monthly" && task.dayOfMonth) {
-            // PROYECTAR TAREA MENSUAL EN EL DÍA EXACTO DEL MES
             for (let monthOffset = 0; monthOffset < 2; monthOffset++) {
                 let targetDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, parseInt(task.dayOfMonth));
                 let dateStr = targetDate.toISOString().split('T')[0];
@@ -482,7 +476,6 @@ function renderMonthlyTab() {
                 }
             }
         } else {
-            // TAREAS ÚNICAS (ONE-TIME)
             let dateStr = task.date || getTodayString();
             if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
                 const dateObj = new Date(dateStr + "T00:00:00");
@@ -503,15 +496,30 @@ function renderMonthlyTab() {
     let html = "";
     for (const monthTitle in monthsGroup) {
         const rawTasks = monthsGroup[monthTitle];
-        
-        // Ordenar las tareas del mes cronológicamente por su fecha proyectada
-        rawTasks.sort((a, b) => new Date(a.displayDate) - new Date(b.displayDate));
-        const sortedTasks = sortTasksByPriority(rawTasks);
+
+        // ORDENAMIENTO CORRECTO: 1° Pendientes Urgentes | 2° Pendientes Normales | 3° Completadas (Agrupadas abajo)
+        rawTasks.sort((a, b) => {
+            const aInstanceId = `${a.id}_${a.displayDate}`;
+            const bInstanceId = `${b.id}_${b.displayDate}`;
+
+            const aCompleted = !!completedTasks[aInstanceId];
+            const bCompleted = !!completedTasks[bInstanceId];
+
+            if (aCompleted !== bCompleted) {
+                return aCompleted ? 1 : -1;
+            }
+
+            if (a.urgent !== b.urgent) {
+                return a.urgent ? -1 : 1;
+            }
+
+            return new Date(a.displayDate) - new Date(b.displayDate);
+        });
 
         const pendingCount = rawTasks.filter(t => !completedTasks[`${t.id}_${t.displayDate}`]).length;
 
         let taskItemsHtml = "";
-        sortedTasks.forEach(task => {
+        rawTasks.forEach(task => {
             const instanceId = `${task.id}_${task.displayDate}`;
             const isChecked = completedTasks[instanceId] ? "checked" : "";
             const completedClass = completedTasks[instanceId] ? "completed" : "";
