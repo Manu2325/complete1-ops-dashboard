@@ -233,7 +233,6 @@ function sortTasksByPriority(tasksArray) {
 }
 
 function isTaskActiveForDate(task, targetDateStr) {
-    // Si la fecha actual está en la lista de fechas excluidas para esta tarea, no se muestra
     if (task.excludedDates && task.excludedDates.includes(targetDateStr)) {
         return false;
     }
@@ -246,7 +245,7 @@ function isTaskActiveForDate(task, targetDateStr) {
     
     if (freq === "weekly") {
         const targetDate = new Date(targetDateStr + "T00:00:00");
-        const targetDay = targetDate.getDay(); // 0: Dom, 1: Lun, ..., 6: Sáb
+        const targetDay = targetDate.getDay(); 
         const taskDay = parseInt(task.dayOfWeek);
         return targetDay === taskDay;
     } 
@@ -326,7 +325,6 @@ function renderWeeklyTab() {
     const currentWeekNum = currentWeekInfo.week;
     const currentYear = currentWeekInfo.year;
 
-    // Rango de semanas a proyectar (Semana Actual, Semana +1, Semana +2)
     const allowedWeeks = [
         currentWeekNum,
         currentWeekNum + 1,
@@ -337,13 +335,11 @@ function renderWeeklyTab() {
 
     userTasks.forEach(task => {
         if (task.frequency === "weekly" && task.dayOfWeek) {
-            // PROYECTAR LA TAREA SEMANAL EN CADA UNA DE LAS SEMANAS DEL RANGO
             allowedWeeks.forEach(weekNum => {
                 const now = new Date();
                 const currentDay = now.getDay() || 7;
                 const targetDay = parseInt(task.dayOfWeek);
                 
-                // Diferencia en días hacia el objetivo de esta semana + semanas futuras
                 let weekOffset = (weekNum - currentWeekNum) * 7;
                 let diff = targetDay - currentDay + weekOffset;
 
@@ -355,13 +351,11 @@ function renderWeeklyTab() {
 
                 if (!weeksGroup[key]) weeksGroup[key] = [];
                 
-                // Evitar duplicados si la regla ya existe
                 if (!weeksGroup[key].some(t => t.id === task.id)) {
                     weeksGroup[key].push({ ...task, displayDate: taskDateStr });
                 }
             });
         } else {
-            // TAREAS ONE-TIME O MONTHLY ASIGNADAS A UNA FECHA ESPECÍFICA
             let taskDateStr = task.date || getTodayString();
             const taskDate = new Date(taskDateStr + "T00:00:00");
             const weekInfo = getWeekNumber(taskDate);
@@ -440,42 +434,123 @@ function renderMonthlyTab() {
         return;
     }
 
-    const selectedDate = document.getElementById("dailyViewDate").value;
-    const sortedTasks = sortTasksByPriority(userTasks);
+    const monthsGroup = {};
+    const now = new Date();
 
-    let taskItemsHtml = "";
-    sortedTasks.forEach(task => {
-        const instanceId = `${task.id}_${selectedDate}`;
-        const isChecked = completedTasks[instanceId] ? "checked" : "";
-        const completedClass = completedTasks[instanceId] ? "completed" : "";
-        const urgentClass = task.urgent ? "urgent" : "";
+    userTasks.forEach(task => {
+        if (task.frequency === "weekly" && task.dayOfWeek) {
+            // PROYECTAR LA TAREA SEMANAL EN TODOS LOS DÍAS CORRESPONDIENTES DEL MES ACTUAL Y PRÓXIMOS MESES
+            const targetDay = parseInt(task.dayOfWeek); // 1: Lun, 2: Mar, ..., 5: Vie
 
-        taskItemsHtml += `
-            <div class="task-item ${completedClass} ${urgentClass}">
-                <input type="checkbox" id="m_${instanceId}" ${isChecked} onchange="toggleTask('${instanceId}')">
-                <div class="task-details">
-                    <label for="m_${instanceId}" class="task-title">
-                        ${task.title}
-                        <span class="task-date-badge">${task.frequency === 'monthly' ? 'Día ' + task.dayOfMonth + ' de cada mes' : (task.date || 'Recurrente')}</span>
-                        ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
-                    </label>
-                    <div class="task-sub">${task.sub || ''}</div>
-                </div>
-                <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
-                <button class="delete-btn" onclick="deleteTask('${task.id}', '${selectedDate}')" title="Eliminar Tarea">🗑️</button>
-            </div>
-        `;
+            for (let monthOffset = 0; monthOffset < 2; monthOffset++) {
+                const year = now.getFullYear();
+                const month = now.getMonth() + monthOffset;
+                
+                // Obtener total de días del mes
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const tempDate = new Date(year, month, d);
+                    const dayOfWeekNum = tempDate.getDay() || 7; // Convertir Domingo (0) a 7
+
+                    if (dayOfWeekNum === targetDay) {
+                        const dateStr = tempDate.toISOString().split('T')[0];
+                        
+                        // Si la fecha específica no está excluida
+                        if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
+                            const monthName = tempDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+                            const key = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+                            if (!monthsGroup[key]) monthsGroup[key] = [];
+                            monthsGroup[key].push({ ...task, displayDate: dateStr });
+                        }
+                    }
+                }
+            }
+        } else if (task.frequency === "monthly" && task.dayOfMonth) {
+            // PROYECTAR TAREA MENSUAL EN EL DÍA EXACTO DEL MES
+            for (let monthOffset = 0; monthOffset < 2; monthOffset++) {
+                let targetDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, parseInt(task.dayOfMonth));
+                let dateStr = targetDate.toISOString().split('T')[0];
+
+                if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
+                    const monthName = targetDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+                    const key = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+                    if (!monthsGroup[key]) monthsGroup[key] = [];
+                    monthsGroup[key].push({ ...task, displayDate: dateStr });
+                }
+            }
+        } else {
+            // TAREAS ÚNICAS (ONE-TIME)
+            let dateStr = task.date || getTodayString();
+            if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
+                const dateObj = new Date(dateStr + "T00:00:00");
+                const monthName = dateObj.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+                const key = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+                if (!monthsGroup[key]) monthsGroup[key] = [];
+                monthsGroup[key].push({ ...task, displayDate: dateStr });
+            }
+        }
     });
 
-    container.innerHTML = `
-        <div class="group-section">
-            <div class="group-header">
-                <span>📌 Plan Mensual</span>
-                <span>${userTasks.length} Tareas Totales</span>
+    if (Object.keys(monthsGroup).length === 0) {
+        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas agendadas para este mes.</div>`;
+        return;
+    }
+
+    let html = "";
+    for (const monthTitle in monthsGroup) {
+        const rawTasks = monthsGroup[monthTitle];
+        
+        // Ordenar las tareas del mes cronológicamente por su fecha proyectada
+        rawTasks.sort((a, b) => new Date(a.displayDate) - new Date(b.displayDate));
+        const sortedTasks = sortTasksByPriority(rawTasks);
+
+        const pendingCount = rawTasks.filter(t => !completedTasks[`${t.id}_${t.displayDate}`]).length;
+
+        let taskItemsHtml = "";
+        sortedTasks.forEach(task => {
+            const instanceId = `${task.id}_${task.displayDate}`;
+            const isChecked = completedTasks[instanceId] ? "checked" : "";
+            const completedClass = completedTasks[instanceId] ? "completed" : "";
+            const urgentClass = task.urgent ? "urgent" : "";
+
+            let freqBadge = "";
+            if (task.frequency === "weekly") freqBadge = '<span class="task-date-badge" style="background: rgba(245, 158, 11, 0.2); color: var(--accent-warning);">🔁 Semanal</span>';
+            if (task.frequency === "monthly") freqBadge = '<span class="task-date-badge" style="background: rgba(34, 197, 94, 0.2); color: var(--accent-green);">🗓️ Mensual</span>';
+
+            taskItemsHtml += `
+                <div class="task-item ${completedClass} ${urgentClass}">
+                    <input type="checkbox" id="m_${instanceId}" ${isChecked} onchange="toggleTask('${instanceId}')">
+                    <div class="task-details">
+                        <label for="m_${instanceId}" class="task-title">
+                            ${task.title}
+                            <span class="task-date-badge">${task.displayDate}</span>
+                            ${freqBadge}
+                            ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
+                        </label>
+                        <div class="task-sub">${task.sub || ''}</div>
+                    </div>
+                    <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
+                    <button class="delete-btn" onclick="deleteTask('${task.id}', '${task.displayDate}')" title="Eliminar Tarea">🗑️</button>
+                </div>
+            `;
+        });
+
+        html += `
+            <div class="group-section">
+                <div class="group-header">
+                    <span>📌 ${monthTitle}</span>
+                    <span>${pendingCount} Pendientes de ${rawTasks.length} totales</span>
+                </div>
+                <div class="task-list">${taskItemsHtml}</div>
             </div>
-            <div class="task-list">${taskItemsHtml}</div>
-        </div>
-    `;
+        `;
+    }
+
+    container.innerHTML = html;
 }
 
 function renderSummaryTab() {
@@ -550,7 +625,6 @@ function toggleUrgent(id) {
     }
 }
 
-// LÓGICA DE BORRADO INTELIGENTE (Única vez vs Permanente)
 function deleteTask(id, currentDate) {
     const task = userTasks.find(t => t.id === id);
     if (!task) return;
@@ -564,7 +638,6 @@ function deleteTask(id, currentDate) {
             saveUserTasksInCloud();
         }
     } else {
-        // Tarea Recurrente (Weekly o Monthly)
         const opcion = prompt(
             `Esta es una tarea RECURRENTE (${freq.toUpperCase()}):\n\n` +
             `Escribe 1: Para eliminar SOLO para la fecha de hoy (${currentDate}).\n` +
@@ -611,9 +684,9 @@ function addNewCustomTask() {
             return;
         }
     } else if (freq === "weekly") {
-        dayOfWeek = document.getElementById("newTaskDayOfWeek").value; // "1" a "5"
+        dayOfWeek = document.getElementById("newTaskDayOfWeek").value;
     } else if (freq === "monthly") {
-        dayOfMonth = document.getElementById("newTaskDayOfMonth").value; // "1" a "31"
+        dayOfMonth = document.getElementById("newTaskDayOfMonth").value;
     }
 
     const newId = "task_" + Date.now();
