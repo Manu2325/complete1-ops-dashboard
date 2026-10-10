@@ -570,27 +570,58 @@ function renderSummaryTab() {
         return;
     }
 
-    let summaryTasks = [];
+    const summaryTasks = [];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
 
-    // Mapear cada tarea a su fecha asignada real en vez del selector diario
+    // PROYECTAR TODAS LAS TAREAS (ÚNICAS, SEMANALES Y MENSUALES) PARA EL RESUMEN GENERAL
     userTasks.forEach(task => {
-        let taskDateStr = task.date || getTodayString();
-        summaryTasks.push({ ...task, displayDate: taskDateStr });
+        if (task.frequency === "weekly" && task.dayOfWeek) {
+            const targetDay = parseInt(task.dayOfWeek);
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const tempDate = new Date(currentYear, currentMonth, d);
+                const dayOfWeekNum = tempDate.getDay() || 7;
+
+                if (dayOfWeekNum === targetDay) {
+                    const dateStr = tempDate.toISOString().split('T')[0];
+                    if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
+                        summaryTasks.push({ ...task, displayDate: dateStr });
+                    }
+                }
+            }
+        } else if (task.frequency === "monthly" && task.dayOfMonth) {
+            const targetDate = new Date(currentYear, currentMonth, parseInt(task.dayOfMonth));
+            const dateStr = targetDate.toISOString().split('T')[0];
+
+            if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
+                summaryTasks.push({ ...task, displayDate: dateStr });
+            }
+        } else {
+            let dateStr = task.date || getTodayString();
+            if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
+                summaryTasks.push({ ...task, displayDate: dateStr });
+            }
+        }
     });
 
+    let filteredTasks = [...summaryTasks];
+
     if (filter === "pending") {
-        summaryTasks = summaryTasks.filter(t => !completedTasks[`${t.id}_${t.displayDate}`] && !completedTasks[t.id]);
+        filteredTasks = filteredTasks.filter(t => !completedTasks[`${t.id}_${t.displayDate}`] && !completedTasks[t.id]);
     } else if (filter === "urgent") {
-        summaryTasks = summaryTasks.filter(t => t.urgent);
+        filteredTasks = filteredTasks.filter(t => t.urgent);
     }
 
-    if (summaryTasks.length === 0) {
+    if (filteredTasks.length === 0) {
         container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas que coincidan con el filtro.</div>`;
         return;
     }
 
-    // Ordenar: 1° Pendientes Urgentes | 2° Pendientes Normales | 3° Completadas
-    summaryTasks.sort((a, b) => {
+    // ORDENAR: 1° Pendientes Urgentes | 2° Pendientes Normales | 3° Completadas
+    filteredTasks.sort((a, b) => {
         const aInstanceId = `${a.id}_${a.displayDate}`;
         const bInstanceId = `${b.id}_${b.displayDate}`;
 
@@ -609,11 +640,15 @@ function renderSummaryTab() {
     });
 
     let taskItemsHtml = "";
-    summaryTasks.forEach(task => {
+    filteredTasks.forEach(task => {
         const instanceId = `${task.id}_${task.displayDate}`;
         const isChecked = (completedTasks[instanceId] || completedTasks[task.id]) ? "checked" : "";
         const completedClass = (completedTasks[instanceId] || completedTasks[task.id]) ? "completed" : "";
         const urgentClass = task.urgent ? "urgent" : "";
+
+        let freqBadge = "";
+        if (task.frequency === "weekly") freqBadge = '<span class="task-date-badge" style="background: rgba(245, 158, 11, 0.2); color: var(--accent-warning);">🔁 Semanal</span>';
+        if (task.frequency === "monthly") freqBadge = '<span class="task-date-badge" style="background: rgba(34, 197, 94, 0.2); color: var(--accent-green);">🗓️ Mensual</span>';
 
         taskItemsHtml += `
             <div class="task-item ${completedClass} ${urgentClass}">
@@ -622,6 +657,7 @@ function renderSummaryTab() {
                     <label for="s_${instanceId}" class="task-title">
                         ${task.title}
                         <span class="task-date-badge">${task.displayDate}</span>
+                        ${freqBadge}
                         ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
                     </label>
                     <div class="task-sub">${task.sub || ''}</div>
@@ -635,7 +671,7 @@ function renderSummaryTab() {
     container.innerHTML = `
         <div class="group-section">
             <div class="group-header">
-                <span>📊 Resumen Consolidado (${summaryTasks.length} Tareas)</span>
+                <span>📊 Resumen Consolidado (${filteredTasks.length} Tareas)</span>
             </div>
             <div class="task-list">${taskItemsHtml}</div>
         </div>
