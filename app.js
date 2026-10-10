@@ -135,6 +135,47 @@ function saveProfilesInCloud() {
     db.ref("profiles").set(profiles);
 }
 
+// Limpieza automática de tareas y registros antiguos de más de 60 días
+function purgeOldTasks() {
+    if (!userTasks || userTasks.length === 0) return;
+
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+    const cutoffDateStr = sixtyDaysAgo.toISOString().split('T')[0];
+
+    let hasChanges = false;
+
+    // 1. Filtrar tareas One-Time vencidas con más de 60 días
+    const initialCount = userTasks.length;
+    userTasks = userTasks.filter(task => {
+        if (task.frequency === "once" && task.date && task.date < cutoffDateStr) {
+            return false; // Eliminar de la lista
+        }
+        return true; // Conservar
+    });
+
+    if (userTasks.length !== initialCount) {
+        hasChanges = true;
+    }
+
+    // 2. Limpiar marcas del historial de completadas antiguas (formato: "taskID_YYYY-MM-DD")
+    Object.keys(completedTasks).forEach(instanceId => {
+        const parts = instanceId.split('_');
+        const taskDate = parts[parts.length - 1];
+
+        if (taskDate && taskDate.length === 10 && taskDate < cutoffDateStr) {
+            delete completedTasks[instanceId];
+            hasChanges = true;
+        }
+    });
+
+    // Guardar en Firebase únicamente si se hicieron liberaciones de espacio
+    if (hasChanges) {
+        saveUserTasksInCloud();
+        console.log("🧹 Limpieza de mantenimiento: Se liberaron registros con más de 60 días de antigüedad.");
+    }
+}
+
 function listenUserTasksInCloud() {
     db.ref(`tasks/${currentUser}`).on("value", snapshot => {
         const data = snapshot.val();
@@ -146,6 +187,10 @@ function listenUserTasksInCloud() {
             completedTasks = {};
             saveUserTasksInCloud();
         }
+        
+        // Purga automática de tareas antiguas
+        purgeOldTasks();
+
         renderTasks();
     });
 }
@@ -279,7 +324,6 @@ function renderDailyTab() {
         return;
     }
 
-    // ORDENAMIENTO CORRECTO EVALUANDO LA INSTANCIA DE FECHA ESPECÍFICA
     const sortedTasks = [...rawTasksForDay].sort((a, b) => {
         const aInstanceId = `${a.id}_${selectedDate}`;
         const bInstanceId = `${b.id}_${selectedDate}`;
