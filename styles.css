@@ -553,3 +553,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     border-radius: 6px;
     border: 1px solid var(--border-color);
 }
+
+.form-select-sm {
+    padding: 8px 12px;
+    background-color: var(--bg-color);
+    border: 1px solid var(--accent-blue);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+}

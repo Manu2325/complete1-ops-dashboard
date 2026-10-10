@@ -35,19 +35,19 @@ const defaultProfiles = {
         subtitle: "Gestión de Operaciones EQ & FP | Cobertura Oct 19 - Nov 14, 2026",
         isManager: false,
         tasks: [
-            { id: "e_d1", date: getTodayString(), title: "Verificar Autonomía de Acceso Nicolas Lozano (7:00 AM)", sub: "Asegurar que pida el código VPN/DUO desde el teléfono de operaciones.", urgent: true },
-            { id: "e_d2", date: getTodayString(), title: "Actualización Bi-horaria de EQ & FP", sub: "Publicar resultados cada 2 horas hasta la salida.", urgent: true },
-            { id: "e_d3", date: getTodayString(), title: "Realizar 2-3 Auditorías QA por Agente (EQ & FP)", sub: "Auditar promesas de pago y calidad diariamente.", urgent: false },
-            { id: "e_d4", date: getTodayString(), title: "Revisar/Actualizar Hojas de Incentivos EQ & FP", sub: "Mantener los registros de incentivos al día.", urgent: false },
-            { id: "e_d5", date: getTodayString(), title: "Atender VTO / Overtime de inmediato", sub: "Tomar ofertas de capacidad en tiempo real.", urgent: true },
-            { id: "e_d6", date: getTodayString(), title: "Alineación de Agent Daily Status con David Urbino", sub: "Revisar métricas con David antes de enviar captura a WFM.", urgent: false },
-            { id: "e_d7", date: getTodayString(), title: "Atención a Google Chats (< 10 min de respuesta)", sub: "Asegurar respuesta inmediata a requerimientos en los chats.", urgent: true },
-            { id: "e_w1", date: "2026-10-12", title: "Envío de Horarios y Novedades a WFM (Cada Lunes)", sub: "Confirmar horarios e incluir novedades del mes.", urgent: true },
-            { id: "e_w2", date: "2026-10-14", title: "Sesión 1-a-1 de Coaching (15-60 min por agente)", sub: "Realizar y documentar sesión semanal por empleado.", urgent: false },
-            { id: "e_w3", date: "2026-10-16", title: "Actualización Sistema Thunder", sub: "Ingresar con credenciales de Adrian y actualizar métricas semanales.", urgent: false },
-            { id: "e_w4", date: "2026-10-16", title: "Gestión de Déficit Semanal de 13 Horas (EQ & FP)", sub: "Cubrir deficit pidiendo OT o ingresando a la línea.", urgent: true },
-            { id: "e_m1", date: "2026-10-28", title: "Desglose de Novedades y Facturación EQ & FP", sub: "Conciliar métricas y novedades del proyecto al cierre.", urgent: false },
-            { id: "e_m2", date: "2026-10-30", title: "Envío de Bonos e Incentivos a Finanzas (Fin de Octubre)", sub: "Enviar correo final de incentivos para pago en 2Q Noviembre.", urgent: true }
+            { id: "e_d1", frequency: "once", date: getTodayString(), title: "Verificar Autonomía de Acceso Nicolas Lozano (7:00 AM)", sub: "Asegurar que pida el código VPN/DUO desde el teléfono de operaciones.", urgent: true },
+            { id: "e_d2", frequency: "once", date: getTodayString(), title: "Actualización Bi-horaria de EQ & FP", sub: "Publicar resultados cada 2 horas hasta la salida.", urgent: true },
+            { id: "e_d3", frequency: "once", date: getTodayString(), title: "Realizar 2-3 Auditorías QA por Agente (EQ & FP)", sub: "Auditar promesas de pago y calidad diariamente.", urgent: false },
+            { id: "e_d4", frequency: "once", date: getTodayString(), title: "Revisar/Actualizar Hojas de Incentivos EQ & FP", sub: "Mantener los registros de incentivos al día.", urgent: false },
+            { id: "e_d5", frequency: "once", date: getTodayString(), title: "Atender VTO / Overtime de inmediato", sub: "Tomar ofertas de capacidad en tiempo real.", urgent: true },
+            { id: "e_d6", frequency: "once", date: getTodayString(), title: "Alineación de Agent Daily Status con David Urbino", sub: "Revisar métricas con David antes de enviar captura a WFM.", urgent: false },
+            { id: "e_d7", frequency: "once", date: getTodayString(), title: "Atención a Google Chats (< 10 min de respuesta)", sub: "Asegurar respuesta inmediata a requerimientos en los chats.", urgent: true },
+            { id: "e_w1", frequency: "once", date: "2026-10-12", title: "Envío de Horarios y Novedades a WFM (Cada Lunes)", sub: "Confirmar horarios e incluir novedades del mes.", urgent: true },
+            { id: "e_w2", frequency: "once", date: "2026-10-14", title: "Sesión 1-a-1 de Coaching (15-60 min por agente)", sub: "Realizar y documentar sesión semanal por empleado.", urgent: false },
+            { id: "e_w3", frequency: "once", date: "2026-10-16", title: "Actualización Sistema Thunder", sub: "Ingresar con credenciales de Adrian y actualizar métricas semanales.", urgent: false },
+            { id: "e_w4", frequency: "once", date: "2026-10-16", title: "Gestión de Déficit Semanal de 13 Horas (EQ & FP)", sub: "Cubrir deficit pidiendo OT o ingresando a la línea.", urgent: true },
+            { id: "e_m1", frequency: "once", date: "2026-10-28", title: "Desglose de Novedades y Facturación EQ & FP", sub: "Conciliar métricas y novedades del proyecto al cierre.", urgent: false },
+            { id: "e_m2", frequency: "once", date: "2026-10-30", title: "Envío de Bonos e Incentivos a Finanzas (Fin de Octubre)", sub: "Enviar correo final de incentivos para pago en 2Q Noviembre.", urgent: true }
         ]
     },
     david: {
@@ -57,11 +57,11 @@ const defaultProfiles = {
         subtitle: "Supervisor OCA Telcom & MED & DISH",
         isManager: false,
         tasks: [
-            { id: "d_d1", date: getTodayString(), title: "Compartir VPN con Pablo y Brandon (7:00 AM)", sub: "Estar atento a las 7:00 AM para dar el código VPN.", urgent: true },
-            { id: "d_d2", date: getTodayString(), title: "Completar Agent Daily Status con Enmanuel", sub: "Consultar a Enmanuel antes de enviar captura a WFM.", urgent: false },
-            { id: "d_d3", date: getTodayString(), title: "Actualización diaria OCA Telcom y MED", sub: "Actualizar resultados diarios y compartir con el equipo.", urgent: false },
-            { id: "d_d4", date: getTodayString(), title: "Auditar 10 llamadas de DISH Spanish al día", sub: "Cumplir con las 10 auditorías diarias obligatorias.", urgent: true },
-            { id: "d_d5", date: getTodayString(), title: "Auditar 2-3 llamadas por agente en MED (Livevox)", sub: "Calidad diaria para el equipo de MED.", urgent: false }
+            { id: "d_d1", frequency: "once", date: getTodayString(), title: "Compartir VPN con Pablo y Brandon (7:00 AM)", sub: "Estar atento a las 7:00 AM para dar el código VPN.", urgent: true },
+            { id: "d_d2", frequency: "once", date: getTodayString(), title: "Completar Agent Daily Status con Enmanuel", sub: "Consultar a Enmanuel antes de enviar captura a WFM.", urgent: false },
+            { id: "d_d3", frequency: "once", date: getTodayString(), title: "Actualización diaria OCA Telcom y MED", sub: "Actualizar resultados diarios y compartir con el equipo.", urgent: false },
+            { id: "d_d4", frequency: "once", date: getTodayString(), title: "Auditar 10 llamadas de DISH Spanish al día", sub: "Cumplir con las 10 auditorías diarias obligatorias.", urgent: true },
+            { id: "d_d5", frequency: "once", date: getTodayString(), title: "Auditar 2-3 llamadas por agente en MED (Livevox)", sub: "Calidad diaria para el equipo de MED.", urgent: false }
         ]
     },
     sergio: {
@@ -71,8 +71,8 @@ const defaultProfiles = {
         subtitle: "Responsable de Reportes y Estadísticas Operativas",
         isManager: false,
         tasks: [
-            { id: "s_d1", date: getTodayString(), title: "Generar Stats Diarias/Semanales/MTD (CRC_QC y CRCC_QC)", sub: "Completar al final del día.", urgent: true },
-            { id: "s_d2", date: getTodayString(), title: "Generar Stats Diarias/Semanales/MTD (Earthlink y Optimum)", sub: "Completar información diaria.", urgent: false }
+            { id: "s_d1", frequency: "once", date: getTodayString(), title: "Generar Stats Diarias/Semanales/MTD (CRC_QC y CRCC_QC)", sub: "Completar al final del día.", urgent: true },
+            { id: "s_d2", frequency: "once", date: getTodayString(), title: "Generar Stats Diarias/Semanales/MTD (Earthlink y Optimum)", sub: "Completar información diaria.", urgent: false }
         ]
     },
     adrian: {
@@ -82,7 +82,7 @@ const defaultProfiles = {
         subtitle: "Líder de Operaciones Complete Recovery",
         isManager: true,
         tasks: [
-            { id: "a_d1", date: getTodayString(), title: "Revisar cumplimiento de SLA de Google Chats (<10 min)", sub: "Supervisar respuesta rápida en los chats.", urgent: true }
+            { id: "a_d1", frequency: "once", date: getTodayString(), title: "Revisar cumplimiento de SLA de Google Chats (<10 min)", sub: "Supervisar respuesta rápida en los chats.", urgent: true }
         ]
     }
 };
@@ -99,6 +99,8 @@ function init() {
     document.getElementById("newTaskDate").value = getTodayString();
     document.getElementById("dailyViewDate").value = getTodayString();
 
+    populateMonthlyDays();
+
     db.ref("profiles").on("value", snapshot => {
         const val = snapshot.val();
         if (val) {
@@ -111,6 +113,22 @@ function init() {
     });
 
     startTimers();
+}
+
+function populateMonthlyDays() {
+    const select = document.getElementById("newTaskDayOfMonth");
+    if (!select) return;
+    select.innerHTML = "";
+    for (let i = 1; i <= 31; i++) {
+        select.innerHTML += `<option value="${i}">Día ${i}</option>`;
+    }
+}
+
+function toggleFrequencyInputs() {
+    const freq = document.getElementById("taskFrequency").value;
+    document.getElementById("containerOnce").style.display = freq === "once" ? "flex" : "none";
+    document.getElementById("containerWeekly").style.display = freq === "weekly" ? "flex" : "none";
+    document.getElementById("containerMonthly").style.display = freq === "monthly" ? "flex" : "none";
 }
 
 function saveProfilesInCloud() {
@@ -197,8 +215,6 @@ function getNextBusinessDay(dateString) {
     return date.toISOString().split('T')[0];
 }
 
-// FUNCIÓN DE ORDENAMIENTO DE PRIORIDAD:
-// 1° Pendientes Urgentes | 2° Pendientes Normales | 3° Completadas
 function sortTasksByPriority(tasksArray) {
     return [...tasksArray].sort((a, b) => {
         const aCompleted = !!completedTasks[a.id];
@@ -216,55 +232,33 @@ function sortTasksByPriority(tasksArray) {
     });
 }
 
-function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
-    const nextBusinessDay = getNextBusinessDay(fechaObjetivo);
-    let resumenAlertas = [];
+function isTaskActiveForDate(task, targetDateStr) {
+    // Si la fecha actual está en la lista de fechas excluidas para esta tarea, no se muestra
+    if (task.excludedDates && task.excludedDates.includes(targetDateStr)) {
+        return false;
+    }
 
-    const usuariosAProcesar = esAutomatico ? Object.keys(profiles) : [currentUser];
+    const freq = task.frequency || "once";
 
-    usuariosAProcesar.forEach(userId => {
-        const userProfile = profiles[userId];
-        
-        db.ref(`tasks/${userId}`).once("value", snapshot => {
-            const data = snapshot.val() || {};
-            let userTasksList = data.userTasks || (userProfile ? userProfile.tasks || [] : []);
-            let userCompletedDict = data.completedTasks || {};
+    if (freq === "once") {
+        return task.date === targetDateStr;
+    } 
+    
+    if (freq === "weekly") {
+        const targetDate = new Date(targetDateStr + "T00:00:00");
+        const targetDay = targetDate.getDay(); // 0: Dom, 1: Lun, ..., 6: Sáb
+        const taskDay = parseInt(task.dayOfWeek);
+        return targetDay === taskDay;
+    } 
+    
+    if (freq === "monthly") {
+        const targetDate = new Date(targetDateStr + "T00:00:00");
+        const targetDayOfMonth = targetDate.getDate();
+        const taskDayOfMonth = parseInt(task.dayOfMonth);
+        return targetDayOfMonth === taskDayOfMonth;
+    }
 
-            const tasksForDay = userTasksList.filter(t => t.date === fechaObjetivo);
-            const incompleteTasks = tasksForDay.filter(t => !userCompletedDict[t.id]);
-
-            if (incompleteTasks.length > 0) {
-                incompleteTasks.forEach(task => {
-                    task.date = nextBusinessDay;
-                });
-
-                db.ref(`tasks/${userId}`).set({
-                    userTasks: userTasksList,
-                    completedTasks: userCompletedDict
-                });
-
-                let listText = incompleteTasks.map(t => `• *${t.title}*`).join('\n');
-                resumenAlertas.push(`👤 *${userProfile.name}* (${userProfile.role}):\n${listText}`);
-            }
-        });
-    });
-
-    setTimeout(() => {
-        if (resumenAlertas.length > 0) {
-            let tituloAlerta = esAutomatico ? "🚨 *CIERRE NOCTURNO AUTOMÁTICO (10:30 PM)* 🚨" : "⚠️ *REAGENDAMIENTO AUTOMÁTICO DE TAREAS* ⚠️";
-            
-            const msg = `${tituloAlerta}\n\nFecha Original: *${fechaObjetivo}*\nReagendadas para: *${nextBusinessDay}* (Siguiente Día Hábil)\n\n*Resumen de Tareas Incompletas Reagendadas:*\n\n${resumenAlertas.join('\n\n')}\n\nLas tareas fueron reprogramadas en la agenda de cada usuario.`;
-
-            enviarAlertaGoogleChat(msg);
-        } else if (!esAutomatico) {
-            alert("¡Felicitaciones! Todas las tareas de hoy están completadas. No hay nada pendiente por reagendar.");
-        }
-    }, 1500);
-}
-
-function cerrarDiaYReagendarIncompletas() {
-    const selectedDate = document.getElementById("dailyViewDate").value;
-    ejecutarCierreYReagendamiento(selectedDate, false);
+    return false;
 }
 
 function renderTasks() {
@@ -277,7 +271,8 @@ function renderTasks() {
 function renderDailyTab() {
     const selectedDate = document.getElementById("dailyViewDate").value;
     const container = document.getElementById("dailyTaskList");
-    const rawTasksForDay = userTasks.filter(t => t.date === selectedDate);
+
+    const rawTasksForDay = userTasks.filter(t => isTaskActiveForDate(t, selectedDate));
 
     if (rawTasksForDay.length === 0) {
         container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas agendadas para el día ${selectedDate}. Agrega una arriba.</div>`;
@@ -285,28 +280,33 @@ function renderDailyTab() {
         return;
     }
 
-    // APLICAR ORDENAMIENTO INTELIGENTE DE PRIORIDAD
     const sortedTasks = sortTasksByPriority(rawTasksForDay);
 
     let doneCount = 0;
     container.innerHTML = sortedTasks.map(task => {
-        const isChecked = completedTasks[task.id] ? "checked" : "";
-        const completedClass = completedTasks[task.id] ? "completed" : "";
+        const instanceId = `${task.id}_${selectedDate}`;
+        const isChecked = completedTasks[instanceId] ? "checked" : "";
+        const completedClass = completedTasks[instanceId] ? "completed" : "";
         const urgentClass = task.urgent ? "urgent" : "";
-        if (completedTasks[task.id]) doneCount++;
+        if (completedTasks[instanceId]) doneCount++;
+
+        let freqBadge = "";
+        if (task.frequency === "weekly") freqBadge = '<span class="task-date-badge" style="background: rgba(245, 158, 11, 0.2); color: var(--accent-warning);">🔁 Semanal</span>';
+        if (task.frequency === "monthly") freqBadge = '<span class="task-date-badge" style="background: rgba(34, 197, 94, 0.2); color: var(--accent-green);">🗓️ Mensual</span>';
 
         return `
             <div class="task-item ${completedClass} ${urgentClass}">
-                <input type="checkbox" id="${task.id}" ${isChecked} onchange="toggleTask('${task.id}')">
+                <input type="checkbox" id="${instanceId}" ${isChecked} onchange="toggleTask('${instanceId}')">
                 <div class="task-details">
-                    <label for="${task.id}" class="task-title">
+                    <label for="${instanceId}" class="task-title">
                         ${task.title}
+                        ${freqBadge}
                         ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
                     </label>
                     <div class="task-sub">${task.sub || ''}</div>
                 </div>
                 <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
-                <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Eliminar Tarea">🗑️</button>
+                <button class="delete-btn" onclick="deleteTask('${task.id}', '${selectedDate}')" title="Eliminar Tarea">🗑️</button>
             </div>
         `;
     }).join('');
@@ -321,57 +321,49 @@ function renderWeeklyTab() {
         return;
     }
 
-    const weeksGroup = {};
-    userTasks.forEach(task => {
-        const taskDate = new Date((task.date || getTodayString()) + "T00:00:00");
-        const weekInfo = getWeekNumber(taskDate);
-        const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}`;
-
-        if (!weeksGroup[key]) weeksGroup[key] = [];
-        weeksGroup[key].push(task);
-    });
-
-    let html = "";
-    for (const weekTitle in weeksGroup) {
-        const rawTasks = weeksGroup[weekTitle];
-        const sortedTasks = sortTasksByPriority(rawTasks);
-        const completedCount = rawTasks.filter(t => completedTasks[t.id]).length;
-
-        let taskItemsHtml = "";
-        sortedTasks.forEach(task => {
-            const isChecked = completedTasks[task.id] ? "checked" : "";
-            const completedClass = completedTasks[task.id] ? "completed" : "";
-            const urgentClass = task.urgent ? "urgent" : "";
-
-            taskItemsHtml += `
-                <div class="task-item ${completedClass} ${urgentClass}">
-                    <input type="checkbox" id="w_${task.id}" ${isChecked} onchange="toggleTask('${task.id}')">
-                    <div class="task-details">
-                        <label for="w_${task.id}" class="task-title">
-                            ${task.title}
-                            <span class="task-date-badge">${task.date}</span>
-                            ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
-                        </label>
-                        <div class="task-sub">${task.sub || ''}</div>
-                    </div>
-                    <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
-                    <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Eliminar Tarea">🗑️</button>
-                </div>
-            `;
-        });
-
-        html += `
-            <div class="group-section">
-                <div class="group-header">
-                    <span>📅 ${weekTitle}</span>
-                    <span>${completedCount} / ${rawTasks.length} Completadas</span>
-                </div>
-                <div class="task-list">${taskItemsHtml}</div>
-            </div>
-        `;
+    const selectedDate = document.getElementById("dailyViewDate").value;
+    const rawTasks = userTasks.filter(t => isTaskActiveForDate(t, selectedDate) || t.frequency === "weekly");
+    
+    if (rawTasks.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas esta semana.</div>`;
+        return;
     }
 
-    container.innerHTML = html;
+    const sortedTasks = sortTasksByPriority(rawTasks);
+
+    let taskItemsHtml = "";
+    sortedTasks.forEach(task => {
+        const instanceId = `${task.id}_${selectedDate}`;
+        const isChecked = completedTasks[instanceId] ? "checked" : "";
+        const completedClass = completedTasks[instanceId] ? "completed" : "";
+        const urgentClass = task.urgent ? "urgent" : "";
+
+        taskItemsHtml += `
+            <div class="task-item ${completedClass} ${urgentClass}">
+                <input type="checkbox" id="w_${instanceId}" ${isChecked} onchange="toggleTask('${instanceId}')">
+                <div class="task-details">
+                    <label for="w_${instanceId}" class="task-title">
+                        ${task.title}
+                        <span class="task-date-badge">${task.date || 'Recurrente'}</span>
+                        ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
+                    </label>
+                    <div class="task-sub">${task.sub || ''}</div>
+                </div>
+                <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
+                <button class="delete-btn" onclick="deleteTask('${task.id}', '${selectedDate}')" title="Eliminar Tarea">🗑️</button>
+            </div>
+        `;
+    });
+
+    container.innerHTML = `
+        <div class="group-section">
+            <div class="group-header">
+                <span>📅 Vista Semanal</span>
+                <span>${rawTasks.length} Tareas Registradas</span>
+            </div>
+            <div class="task-list">${taskItemsHtml}</div>
+        </div>
+    `;
 }
 
 function renderMonthlyTab() {
@@ -381,58 +373,42 @@ function renderMonthlyTab() {
         return;
     }
 
-    const monthsGroup = {};
-    userTasks.forEach(task => {
-        const parts = (task.date || getTodayString()).split('-');
-        const dateObj = new Date(parts[0], parts[1] - 1, 1);
-        const monthName = dateObj.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
-        const key = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+    const selectedDate = document.getElementById("dailyViewDate").value;
+    const sortedTasks = sortTasksByPriority(userTasks);
 
-        if (!monthsGroup[key]) monthsGroup[key] = [];
-        monthsGroup[key].push(task);
-    });
+    let taskItemsHtml = "";
+    sortedTasks.forEach(task => {
+        const instanceId = `${task.id}_${selectedDate}`;
+        const isChecked = completedTasks[instanceId] ? "checked" : "";
+        const completedClass = completedTasks[instanceId] ? "completed" : "";
+        const urgentClass = task.urgent ? "urgent" : "";
 
-    let html = "";
-    for (const monthTitle in monthsGroup) {
-        const rawTasks = monthsGroup[monthTitle];
-        const sortedTasks = sortTasksByPriority(rawTasks);
-        const pendingCount = rawTasks.filter(t => !completedTasks[t.id]).length;
-
-        let taskItemsHtml = "";
-        sortedTasks.forEach(task => {
-            const isChecked = completedTasks[task.id] ? "checked" : "";
-            const completedClass = completedTasks[task.id] ? "completed" : "";
-            const urgentClass = task.urgent ? "urgent" : "";
-
-            taskItemsHtml += `
-                <div class="task-item ${completedClass} ${urgentClass}">
-                    <input type="checkbox" id="m_${task.id}" ${isChecked} onchange="toggleTask('${task.id}')">
-                    <div class="task-details">
-                        <label for="m_${task.id}" class="task-title">
-                            ${task.title}
-                            <span class="task-date-badge">${task.date}</span>
-                            ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
-                        </label>
-                        <div class="task-sub">${task.sub || ''}</div>
-                    </div>
-                    <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
-                    <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Eliminar Tarea">🗑️</button>
+        taskItemsHtml += `
+            <div class="task-item ${completedClass} ${urgentClass}">
+                <input type="checkbox" id="m_${instanceId}" ${isChecked} onchange="toggleTask('${instanceId}')">
+                <div class="task-details">
+                    <label for="m_${instanceId}" class="task-title">
+                        ${task.title}
+                        <span class="task-date-badge">${task.frequency === 'monthly' ? 'Día ' + task.dayOfMonth + ' de cada mes' : (task.date || 'Recurrente')}</span>
+                        ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
+                    </label>
+                    <div class="task-sub">${task.sub || ''}</div>
                 </div>
-            `;
-        });
-
-        html += `
-            <div class="group-section">
-                <div class="group-header">
-                    <span>📌 ${monthTitle}</span>
-                    <span>${pendingCount} Pendientes de ${rawTasks.length} totales</span>
-                </div>
-                <div class="task-list">${taskItemsHtml}</div>
+                <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
+                <button class="delete-btn" onclick="deleteTask('${task.id}', '${selectedDate}')" title="Eliminar Tarea">🗑️</button>
             </div>
         `;
-    }
+    });
 
-    container.innerHTML = html;
+    container.innerHTML = `
+        <div class="group-section">
+            <div class="group-header">
+                <span>📌 Plan Mensual</span>
+                <span>${userTasks.length} Tareas Totales</span>
+            </div>
+            <div class="task-list">${taskItemsHtml}</div>
+        </div>
+    `;
 }
 
 function renderSummaryTab() {
@@ -444,10 +420,11 @@ function renderSummaryTab() {
         return;
     }
 
+    const selectedDate = document.getElementById("dailyViewDate").value;
     let filteredTasks = [...userTasks];
 
     if (filter === "pending") {
-        filteredTasks = filteredTasks.filter(t => !completedTasks[t.id]);
+        filteredTasks = filteredTasks.filter(t => !completedTasks[`${t.id}_${selectedDate}`]);
     } else if (filter === "urgent") {
         filteredTasks = filteredTasks.filter(t => t.urgent);
     }
@@ -457,28 +434,28 @@ function renderSummaryTab() {
         return;
     }
 
-    // APLICAR ORDENAMIENTO
     const sortedTasks = sortTasksByPriority(filteredTasks);
 
     let taskItemsHtml = "";
     sortedTasks.forEach(task => {
-        const isChecked = completedTasks[task.id] ? "checked" : "";
-        const completedClass = completedTasks[task.id] ? "completed" : "";
+        const instanceId = `${task.id}_${selectedDate}`;
+        const isChecked = completedTasks[instanceId] ? "checked" : "";
+        const completedClass = completedTasks[instanceId] ? "completed" : "";
         const urgentClass = task.urgent ? "urgent" : "";
 
         taskItemsHtml += `
             <div class="task-item ${completedClass} ${urgentClass}">
-                <input type="checkbox" id="s_${task.id}" ${isChecked} onchange="toggleTask('${task.id}')">
+                <input type="checkbox" id="s_${instanceId}" ${isChecked} onchange="toggleTask('${instanceId}')">
                 <div class="task-details">
-                    <label for="s_${task.id}" class="task-title">
+                    <label for="s_${instanceId}" class="task-title">
                         ${task.title}
-                        <span class="task-date-badge">${task.date}</span>
+                        <span class="task-date-badge">${task.date || 'Recurrente'}</span>
                         ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
                     </label>
                     <div class="task-sub">${task.sub || ''}</div>
                 </div>
                 <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
-                <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Eliminar Tarea">🗑️</button>
+                <button class="delete-btn" onclick="deleteTask('${task.id}', '${selectedDate}')" title="Eliminar Tarea">🗑️</button>
             </div>
         `;
     });
@@ -493,8 +470,8 @@ function renderSummaryTab() {
     `;
 }
 
-function toggleTask(id) {
-    completedTasks[id] = !completedTasks[id];
+function toggleTask(instanceId) {
+    completedTasks[instanceId] = !completedTasks[instanceId];
     saveUserTasksInCloud();
 }
 
@@ -506,30 +483,93 @@ function toggleUrgent(id) {
     }
 }
 
-function deleteTask(id) {
-    userTasks = userTasks.filter(t => t.id !== id);
-    delete completedTasks[id];
-    saveUserTasksInCloud();
+// LÓGICA DE BORRADO INTELIGENTE (Única vez vs Permanente)
+function deleteTask(id, currentDate) {
+    const task = userTasks.find(t => t.id === id);
+    if (!task) return;
+
+    const freq = task.frequency || "once";
+
+    if (freq === "once") {
+        if (confirm(`¿Eliminar la tarea "${task.title}"?`)) {
+            userTasks = userTasks.filter(t => t.id !== id);
+            delete completedTasks[`${id}_${currentDate}`];
+            saveUserTasksInCloud();
+        }
+    } else {
+        // Tarea Recurrente (Weekly o Monthly)
+        const opcion = prompt(
+            `Esta es una tarea RECURRENTE (${freq.toUpperCase()}):\n\n` +
+            `Escribe 1: Para eliminar SOLO para la fecha de hoy (${currentDate}).\n` +
+            `Escribe 2: Para eliminar DEFINITIVAMENTE del calendario futuro.\n\n` +
+            `Ingresa tu opción (1 o 2):`, "1"
+        );
+
+        if (opcion === "1") {
+            if (!task.excludedDates) task.excludedDates = [];
+            if (!task.excludedDates.includes(currentDate)) {
+                task.excludedDates.push(currentDate);
+            }
+            delete completedTasks[`${id}_${currentDate}`];
+            saveUserTasksInCloud();
+            alert(`La tarea ha sido oculta para la fecha ${currentDate}. Volverá a aparecer en la siguiente recurrencia.`);
+        } else if (opcion === "2") {
+            userTasks = userTasks.filter(t => t.id !== id);
+            delete completedTasks[`${id}_${currentDate}`];
+            saveUserTasksInCloud();
+            alert(`La tarea "${task.title}" fue eliminada definitivamente del calendario.`);
+        }
+    }
 }
 
 function addNewCustomTask() {
     const title = document.getElementById("newTaskTitle").value.trim();
     const sub = document.getElementById("newTaskSub").value.trim();
-    const date = document.getElementById("newTaskDate").value;
     const isUrgent = document.getElementById("newTaskUrgent").checked;
+    const freq = document.getElementById("taskFrequency").value;
 
-    if (!title || !date) {
-        alert("Por favor ingresa un nombre para la tarea y selecciona una fecha.");
+    if (!title) {
+        alert("Por favor ingresa un nombre para la tarea.");
         return;
     }
 
+    let calculatedDate = "";
+    let dayOfWeek = null;
+    let dayOfMonth = null;
+
+    if (freq === "once") {
+        calculatedDate = document.getElementById("newTaskDate").value;
+        if (!calculatedDate) {
+            alert("Por favor selecciona una fecha válida.");
+            return;
+        }
+    } else if (freq === "weekly") {
+        dayOfWeek = document.getElementById("newTaskDayOfWeek").value; // "1" a "5"
+    } else if (freq === "monthly") {
+        dayOfMonth = document.getElementById("newTaskDayOfMonth").value; // "1" a "31"
+    }
+
     const newId = "task_" + Date.now();
-    userTasks.push({ id: newId, date: date, title: title, sub: sub, urgent: isUrgent });
+    
+    userTasks.push({ 
+        id: newId, 
+        date: calculatedDate, 
+        dayOfWeek: dayOfWeek,
+        dayOfMonth: dayOfMonth,
+        title: title, 
+        sub: sub, 
+        urgent: isUrgent,
+        frequency: freq,
+        excludedDates: []
+    });
+
     saveUserTasksInCloud();
 
     document.getElementById("newTaskTitle").value = "";
     document.getElementById("newTaskSub").value = "";
     document.getElementById("newTaskUrgent").checked = false;
+    
+    alert(`Tarea creada con éxito como ${freq.toUpperCase()}.`);
 }
 
 function updateDailyProgress(done, total) {
@@ -545,8 +585,8 @@ function updateDailyProgress(done, total) {
 
 function resetAllDailyTasks() {
     const selectedDate = document.getElementById("dailyViewDate").value;
-    const tasksForDay = userTasks.filter(t => t.date === selectedDate);
-    tasksForDay.forEach(t => completedTasks[t.id] = false);
+    const tasksForDay = userTasks.filter(t => isTaskActiveForDate(t, selectedDate));
+    tasksForDay.forEach(t => completedTasks[`${t.id}_${selectedDate}`] = false);
     saveUserTasksInCloud();
 }
 
@@ -638,7 +678,7 @@ function addNewSupervisor() {
         subtitle: sub || "Operations Supervisor",
         isManager: false,
         tasks: [
-            { id: newId + "_1", date: getTodayString(), title: "Revisar correo de alineación y operativas", sub: "Tarea inicial asignada.", urgent: false }
+            { id: newId + "_1", frequency: "once", date: getTodayString(), title: "Revisar correo de alineación y operativas", sub: "Tarea inicial asignada.", urgent: false }
         ]
     };
 
@@ -673,7 +713,7 @@ async function enviarAlertaGoogleChat(textoMensaje) {
 
 function enviarAlertasUrgentesDelDia() {
     const today = getTodayString();
-    const urgentToday = userTasks.filter(t => t.date === today && t.urgent && !completedTasks[t.id]);
+    const urgentToday = userTasks.filter(t => isTaskActiveForDate(t, today) && t.urgent && !completedTasks[`${t.id}_${today}`]);
     const profile = profiles[currentUser];
 
     if (urgentToday.length === 0) {
@@ -799,6 +839,59 @@ function formatTimeMs(ms, includeHours = true) {
     } else {
         return `${pad(minutes)}:${pad(seconds)}`;
     }
+}
+
+function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
+    const nextBusinessDay = getNextBusinessDay(fechaObjetivo);
+    let resumenAlertas = [];
+
+    const usuariosAProcesar = esAutomatico ? Object.keys(profiles) : [currentUser];
+
+    usuariosAProcesar.forEach(userId => {
+        const userProfile = profiles[userId];
+        
+        db.ref(`tasks/${userId}`).once("value", snapshot => {
+            const data = snapshot.val() || {};
+            let userTasksList = data.userTasks || (userProfile ? userProfile.tasks || [] : []);
+            let userCompletedDict = data.completedTasks || {};
+
+            const tasksForDay = userTasksList.filter(t => isTaskActiveForDate(t, fechaObjetivo));
+            const incompleteTasks = tasksForDay.filter(t => !userCompletedDict[`${t.id}_${fechaObjetivo}`]);
+
+            if (incompleteTasks.length > 0) {
+                incompleteTasks.forEach(task => {
+                    if (task.frequency === "once") {
+                        task.date = nextBusinessDay;
+                    }
+                });
+
+                db.ref(`tasks/${userId}`).set({
+                    userTasks: userTasksList,
+                    completedTasks: userCompletedDict
+                });
+
+                let listText = incompleteTasks.map(t => `• *${t.title}*`).join('\n');
+                resumenAlertas.push(`👤 *${userProfile.name}* (${userProfile.role}):\n${listText}`);
+            }
+        });
+    });
+
+    setTimeout(() => {
+        if (resumenAlertas.length > 0) {
+            let tituloAlerta = esAutomatico ? "🚨 *CIERRE NOCTURNO AUTOMÁTICO (10:30 PM)* 🚨" : "⚠️ *REAGENDAMIENTO AUTOMÁTICO DE TAREAS* ⚠️";
+            
+            const msg = `${tituloAlerta}\n\nFecha Original: *${fechaObjetivo}*\nReagendadas para: *${nextBusinessDay}* (Siguiente Día Hábil)\n\n*Resumen de Tareas Incompletas Reagendadas:*\n\n${resumenAlertas.join('\n\n')}\n\nLas tareas fueron reprogramadas en la agenda de cada usuario.`;
+
+            enviarAlertaGoogleChat(msg);
+        } else if (!esAutomatico) {
+            alert("¡Felicitaciones! Todas las tareas de hoy están completadas. No hay nada pendiente por reagendar.");
+        }
+    }, 1500);
+}
+
+function cerrarDiaYReagendarIncompletas() {
+    const selectedDate = document.getElementById("dailyViewDate").value;
+    ejecutarCierreYReagendamiento(selectedDate, false);
 }
 
 window.onload = init;

@@ -5,16 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Operational Task Manager</title>
     
-    <!-- FAVICON DIRECTO CON EMOJI DE TABLERO DE TAREAS -->
+    <!-- Favicon con Emoji de Tablero de Tareas -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
-
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
     <header>
         <div>
-            <h1 id="appTitle">Operations Task Manager</h1>
+            <h1 id="appTitle">Operations Dashboard</h1>
             <p class="subtitle" id="userRoleSubtitle">Cargando perfil...</p>
         </div>
         <div class="header-actions">
@@ -59,18 +59,48 @@
         <button class="tab-btn" onclick="switchTab('summaryTab')">📊 Resumen General (Summary)</button>
     </div>
 
-    <!-- Creador de Tareas con Opción Urgente -->
+    <!-- Creador de Tareas Inteligente (Única, Semanal o Mensual) -->
     <div class="add-task-box">
         <input type="text" id="newTaskTitle" placeholder="Nombre de la tarea...">
         <input type="text" id="newTaskSub" placeholder="Detalle / Subtítulo opcional">
+        
+        <!-- Selector de Frecuencia de la Tarea -->
         <div class="date-picker-group">
-            <label for="newTaskDate">Asignar Fecha:</label>
+            <label for="taskFrequency">Frecuencia:</label>
+            <select id="taskFrequency" class="form-select-sm" onchange="toggleFrequencyInputs()">
+                <option value="once">One-Time Task (Única)</option>
+                <option value="weekly">Weekly Task (Semanal)</option>
+                <option value="monthly">Monthly Task (Mensual)</option>
+            </select>
+        </div>
+
+        <!-- Inputs Dinámicos según Frecuencia -->
+        <div class="date-picker-group" id="containerOnce">
+            <label for="newTaskDate">Fecha:</label>
             <input type="date" id="newTaskDate">
         </div>
+
+        <div class="date-picker-group" id="containerWeekly" style="display: none;">
+            <label for="newTaskDayOfWeek">Día de la semana:</label>
+            <select id="newTaskDayOfWeek" class="form-select-sm">
+                <option value="1">Lunes</option>
+                <option value="2">Martes</option>
+                <option value="3">Miércoles</option>
+                <option value="4">Jueves</option>
+                <option value="5">Viernes</option>
+            </select>
+        </div>
+
+        <div class="date-picker-group" id="containerMonthly" style="display: none;">
+            <label for="newTaskDayOfMonth">Día del mes (1-31):</label>
+            <select id="newTaskDayOfMonth" class="form-select-sm"></select>
+        </div>
+
         <div class="urgent-checkbox-group">
             <input type="checkbox" id="newTaskUrgent">
             <label for="newTaskUrgent" style="color: var(--accent-danger); font-weight: bold; cursor: pointer;">🚨 Marcar Urgente</label>
         </div>
+
         <button class="btn" onclick="addNewCustomTask()">+ Agregar a Agenda</button>
     </div>
 
@@ -173,9 +203,10 @@
         </ul>
     </div>
 
-    <!-- SDK de Firebase (Compatibilidad) -->
+    <!-- LIBRERÍAS DE FIREBASE EN TIEMPO REAL -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
     <script src="app.js"></script>
 </body>
 </html>
