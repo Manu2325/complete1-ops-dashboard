@@ -279,7 +279,24 @@ function renderDailyTab() {
         return;
     }
 
-    const sortedTasks = sortTasksByPriority(rawTasksForDay);
+    // ORDENAMIENTO CORRECTO EVALUANDO LA INSTANCIA DE FECHA ESPECÍFICA
+    const sortedTasks = [...rawTasksForDay].sort((a, b) => {
+        const aInstanceId = `${a.id}_${selectedDate}`;
+        const bInstanceId = `${b.id}_${selectedDate}`;
+
+        const aCompleted = !!completedTasks[aInstanceId];
+        const bCompleted = !!completedTasks[bInstanceId];
+
+        if (aCompleted !== bCompleted) {
+            return aCompleted ? 1 : -1;
+        }
+
+        if (a.urgent !== b.urgent) {
+            return a.urgent ? -1 : 1;
+        }
+
+        return 0;
+    });
 
     let doneCount = 0;
     container.innerHTML = sortedTasks.map(task => {
