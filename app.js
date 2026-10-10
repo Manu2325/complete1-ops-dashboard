@@ -342,6 +342,7 @@ function renderWeeklyTab() {
     const currentWeekNum = currentWeekInfo.week;
     const currentYear = currentWeekInfo.year;
 
+    // Rango de semanas visibles (Semana Actual, Semana +1, Semana +2)
     const allowedWeeks = [
         currentWeekNum,
         currentWeekNum + 1,
@@ -352,6 +353,7 @@ function renderWeeklyTab() {
 
     userTasks.forEach(task => {
         if (task.frequency === "weekly" && task.dayOfWeek) {
+            // TAREAS SEMANALES RECURRENTES
             allowedWeeks.forEach(weekNum => {
                 const now = new Date();
                 const currentDay = now.getDay() || 7;
@@ -364,24 +366,46 @@ function renderWeeklyTab() {
                 tempDate.setDate(now.getDate() + diff);
                 const taskDateStr = tempDate.toISOString().split('T')[0];
 
-                const key = `Semana ${weekNum} - Año ${currentYear}` + (weekNum === currentWeekNum ? " (Semana Actual)" : "");
+                if (!task.excludedDates || !task.excludedDates.includes(taskDateStr)) {
+                    const key = `Semana ${weekNum} - Año ${currentYear}` + (weekNum === currentWeekNum ? " (Semana Actual)" : "");
 
-                if (!weeksGroup[key]) weeksGroup[key] = [];
-                
-                if (!weeksGroup[key].some(t => t.id === task.id)) {
-                    weeksGroup[key].push({ ...task, displayDate: taskDateStr });
+                    if (!weeksGroup[key]) weeksGroup[key] = [];
+                    if (!weeksGroup[key].some(t => t.id === task.id)) {
+                        weeksGroup[key].push({ ...task, displayDate: taskDateStr });
+                    }
                 }
             });
+        } else if (task.frequency === "monthly" && task.dayOfMonth) {
+            // TAREAS MENSUALES RECURRENTES: CALCULAR FECHA REAL DEL MES EN CURSO
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            const targetDate = new Date(year, month, parseInt(task.dayOfMonth));
+            const taskDateStr = targetDate.toISOString().split('T')[0];
+
+            if (!task.excludedDates || !task.excludedDates.includes(taskDateStr)) {
+                const weekInfo = getWeekNumber(targetDate);
+
+                // Solo mostrar en la vista semanal si la semana de la tarea está dentro del rango visible
+                if (weekInfo.year === currentYear && allowedWeeks.includes(weekInfo.week)) {
+                    const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}` + (weekInfo.week === currentWeekNum ? " (Semana Actual)" : "");
+
+                    if (!weeksGroup[key]) weeksGroup[key] = [];
+                    weeksGroup[key].push({ ...task, displayDate: taskDateStr });
+                }
+            }
         } else {
+            // TAREAS ÚNICAS (ONE-TIME)
             let taskDateStr = task.date || getTodayString();
-            const taskDate = new Date(taskDateStr + "T00:00:00");
-            const weekInfo = getWeekNumber(taskDate);
+            if (!task.excludedDates || !task.excludedDates.includes(taskDateStr)) {
+                const taskDate = new Date(taskDateStr + "T00:00:00");
+                const weekInfo = getWeekNumber(taskDate);
 
-            if (weekInfo.year === currentYear && allowedWeeks.includes(weekInfo.week)) {
-                const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}` + (weekInfo.week === currentWeekNum ? " (Semana Actual)" : "");
+                if (weekInfo.year === currentYear && allowedWeeks.includes(weekInfo.week)) {
+                    const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}` + (weekInfo.week === currentWeekNum ? " (Semana Actual)" : "");
 
-                if (!weeksGroup[key]) weeksGroup[key] = [];
-                weeksGroup[key].push({ ...task, displayDate: taskDateStr });
+                    if (!weeksGroup[key]) weeksGroup[key] = [];
+                    weeksGroup[key].push({ ...task, displayDate: taskDateStr });
+                }
             }
         }
     });
