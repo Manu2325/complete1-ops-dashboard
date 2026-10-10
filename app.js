@@ -135,7 +135,6 @@ function saveProfilesInCloud() {
     db.ref("profiles").set(profiles);
 }
 
-// Limpieza automática de tareas y registros antiguos de más de 60 días
 function purgeOldTasks() {
     if (!userTasks || userTasks.length === 0) return;
 
@@ -145,20 +144,18 @@ function purgeOldTasks() {
 
     let hasChanges = false;
 
-    // 1. Filtrar tareas One-Time vencidas con más de 60 días
     const initialCount = userTasks.length;
     userTasks = userTasks.filter(task => {
         if (task.frequency === "once" && task.date && task.date < cutoffDateStr) {
-            return false; // Eliminar de la lista
+            return false;
         }
-        return true; // Conservar
+        return true;
     });
 
     if (userTasks.length !== initialCount) {
         hasChanges = true;
     }
 
-    // 2. Limpiar marcas del historial de completadas antiguas (formato: "taskID_YYYY-MM-DD")
     Object.keys(completedTasks).forEach(instanceId => {
         const parts = instanceId.split('_');
         const taskDate = parts[parts.length - 1];
@@ -169,7 +166,6 @@ function purgeOldTasks() {
         }
     });
 
-    // Guardar en Firebase únicamente si se hicieron liberaciones de espacio
     if (hasChanges) {
         saveUserTasksInCloud();
         console.log("🧹 Limpieza de mantenimiento: Se liberaron registros con más de 60 días de antigüedad.");
@@ -188,9 +184,7 @@ function listenUserTasksInCloud() {
             saveUserTasksInCloud();
         }
         
-        // Purga automática de tareas antiguas
         purgeOldTasks();
-
         renderTasks();
     });
 }
@@ -260,6 +254,20 @@ function getNextBusinessDay(dateString) {
     return date.toISOString().split('T')[0];
 }
 
+// OBTENER EL DÍA HÁBIL ANTERIOR (Si cae Sábado o Domingo, lo pasa a Viernes)
+function getPreviousBusinessDay(year, monthIndex, dayOfMonth) {
+    let date = new Date(year, monthIndex, dayOfMonth);
+    let dayOfWeek = date.getDay(); // 0: Dom, 6: Sáb
+
+    if (dayOfWeek === 0) { // Domingo -> Viernes (-2 días)
+        date.setDate(date.getDate() - 2);
+    } else if (dayOfWeek === 6) { // Sábado -> Viernes (-1 día)
+        date.setDate(date.getDate() - 1);
+    }
+
+    return date.toISOString().split('T')[0];
+}
+
 function sortTasksByPriority(tasksArray) {
     return [...tasksArray].sort((a, b) => {
         const aCompleted = !!completedTasks[a.id];
@@ -297,9 +305,8 @@ function isTaskActiveForDate(task, targetDateStr) {
     
     if (freq === "monthly") {
         const targetDate = new Date(targetDateStr + "T00:00:00");
-        const targetDayOfMonth = targetDate.getDate();
-        const taskDayOfMonth = parseInt(task.dayOfMonth);
-        return targetDayOfMonth === taskDayOfMonth;
+        const adjustedDateStr = getPreviousBusinessDay(targetDate.getFullYear(), targetDate.getMonth(), parseInt(task.dayOfMonth));
+        return adjustedDateStr === targetDateStr;
     }
 
     return false;
@@ -420,11 +427,10 @@ function renderWeeklyTab() {
         } else if (task.frequency === "monthly" && task.dayOfMonth) {
             const year = today.getFullYear();
             const month = today.getMonth();
-            const targetDate = new Date(year, month, parseInt(task.dayOfMonth));
-            const taskDateStr = targetDate.toISOString().split('T')[0];
+            const taskDateStr = getPreviousBusinessDay(year, month, parseInt(task.dayOfMonth));
 
             if (!task.excludedDates || !task.excludedDates.includes(taskDateStr)) {
-                const weekInfo = getWeekNumber(targetDate);
+                const weekInfo = getWeekNumber(new Date(taskDateStr + "T00:00:00"));
 
                 if (weekInfo.year === currentYear && allowedWeeks.includes(weekInfo.week)) {
                     const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}` + (weekInfo.week === currentWeekNum ? " (Semana Actual)" : "");
@@ -544,15 +550,18 @@ function renderMonthlyTab() {
             }
         } else if (task.frequency === "monthly" && task.dayOfMonth) {
             for (let monthOffset = 0; monthOffset < 2; monthOffset++) {
-                let targetDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, parseInt(task.dayOfMonth));
-                let dateStr = targetDate.toISOString().split('T')[0];
+                const year = now.getFullYear();
+                const month = now.getMonth() + monthOffset;
+                const dateStr = getPreviousBusinessDay(year, month, parseInt(task.dayOfMonth));
 
                 if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
-                    const monthName = targetDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+                    const monthName = new Date(dateStr + "T00:00:00").toLocaleString('es-ES', { month: 'long', year: 'numeric' });
                     const key = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
                     if (!monthsGroup[key]) monthsGroup[key] = [];
-                    monthsGroup[key].push({ ...task, displayDate: dateStr });
+                    if (!monthsGroup[key].some(t => t.id === task.id && t.displayDate === dateStr)) {
+                        monthsGroup[key].push({ ...task, displayDate: dateStr });
+                    }
                 }
             }
         } else {
@@ -671,8 +680,7 @@ function renderSummaryTab() {
                 }
             }
         } else if (task.frequency === "monthly" && task.dayOfMonth) {
-            const targetDate = new Date(currentYear, currentMonth, parseInt(task.dayOfMonth));
-            const dateStr = targetDate.toISOString().split('T')[0];
+            const dateStr = getPreviousBusinessDay(currentYear, currentMonth, parseInt(task.dayOfMonth));
 
             if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
                 summaryTasks.push({ ...task, displayDate: dateStr });
@@ -1124,7 +1132,6 @@ function formatTimeMs(ms, includeHours = true) {
     }
 }
 
-// LÓGICA DE CIERRE Y REAGENDAMIENTO MEJORADA (Soporta tareas únicas y recurrentes)
 function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
     const nextBusinessDay = getNextBusinessDay(fechaObjetivo);
     let resumenAlertas = [];
@@ -1146,10 +1153,8 @@ function ejecutarCierreYReagendamiento(fechaObjetivo, esAutomatico = false) {
                 incompleteTasks.forEach(task => {
                     const freq = task.frequency || "once";
                     if (freq === "once") {
-                        // Tarea de única vez: Mover directamente la fecha al siguiente día hábil
                         task.date = nextBusinessDay;
                     } else {
-                        // Tarea recurrente (Weekly/Monthly): Crear arrastre para el siguiente día hábil
                         const carryOverId = `carry_${task.id}_${nextBusinessDay}`;
                         if (!userTasksList.some(t => t.id === carryOverId)) {
                             userTasksList.push({
