@@ -570,27 +570,49 @@ function renderSummaryTab() {
         return;
     }
 
-    const selectedDate = document.getElementById("dailyViewDate").value;
-    let filteredTasks = [...userTasks];
+    let summaryTasks = [];
+
+    // Mapear cada tarea a su fecha asignada real en vez del selector diario
+    userTasks.forEach(task => {
+        let taskDateStr = task.date || getTodayString();
+        summaryTasks.push({ ...task, displayDate: taskDateStr });
+    });
 
     if (filter === "pending") {
-        filteredTasks = filteredTasks.filter(t => !completedTasks[`${t.id}_${selectedDate}`]);
+        summaryTasks = summaryTasks.filter(t => !completedTasks[`${t.id}_${t.displayDate}`] && !completedTasks[t.id]);
     } else if (filter === "urgent") {
-        filteredTasks = filteredTasks.filter(t => t.urgent);
+        summaryTasks = summaryTasks.filter(t => t.urgent);
     }
 
-    if (filteredTasks.length === 0) {
+    if (summaryTasks.length === 0) {
         container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas que coincidan con el filtro.</div>`;
         return;
     }
 
-    const sortedTasks = sortTasksByPriority(filteredTasks);
+    // Ordenar: 1° Pendientes Urgentes | 2° Pendientes Normales | 3° Completadas
+    summaryTasks.sort((a, b) => {
+        const aInstanceId = `${a.id}_${a.displayDate}`;
+        const bInstanceId = `${b.id}_${b.displayDate}`;
+
+        const aCompleted = !!(completedTasks[aInstanceId] || completedTasks[a.id]);
+        const bCompleted = !!(completedTasks[bInstanceId] || completedTasks[b.id]);
+
+        if (aCompleted !== bCompleted) {
+            return aCompleted ? 1 : -1;
+        }
+
+        if (a.urgent !== b.urgent) {
+            return a.urgent ? -1 : 1;
+        }
+
+        return new Date(a.displayDate) - new Date(b.displayDate);
+    });
 
     let taskItemsHtml = "";
-    sortedTasks.forEach(task => {
-        const instanceId = `${task.id}_${selectedDate}`;
-        const isChecked = completedTasks[instanceId] ? "checked" : "";
-        const completedClass = completedTasks[instanceId] ? "completed" : "";
+    summaryTasks.forEach(task => {
+        const instanceId = `${task.id}_${task.displayDate}`;
+        const isChecked = (completedTasks[instanceId] || completedTasks[task.id]) ? "checked" : "";
+        const completedClass = (completedTasks[instanceId] || completedTasks[task.id]) ? "completed" : "";
         const urgentClass = task.urgent ? "urgent" : "";
 
         taskItemsHtml += `
@@ -599,13 +621,13 @@ function renderSummaryTab() {
                 <div class="task-details">
                     <label for="s_${instanceId}" class="task-title">
                         ${task.title}
-                        <span class="task-date-badge">${task.date || 'Recurrente'}</span>
+                        <span class="task-date-badge">${task.displayDate}</span>
                         ${task.urgent ? '<span class="task-urgent-badge">🚨 URGENTE</span>' : ''}
                     </label>
                     <div class="task-sub">${task.sub || ''}</div>
                 </div>
                 <button class="urgent-toggle-btn" onclick="toggleUrgent('${task.id}')" title="Marcar/Desmarcar Urgente">${task.urgent ? '🚨' : '⚪'}</button>
-                <button class="delete-btn" onclick="deleteTask('${task.id}', '${selectedDate}')" title="Eliminar Tarea">🗑️</button>
+                <button class="delete-btn" onclick="deleteTask('${task.id}', '${task.displayDate}')" title="Eliminar Tarea">🗑️</button>
             </div>
         `;
     });
@@ -613,7 +635,7 @@ function renderSummaryTab() {
     container.innerHTML = `
         <div class="group-section">
             <div class="group-header">
-                <span>📊 Resumen Consolidado (${filteredTasks.length} Tareas)</span>
+                <span>📊 Resumen Consolidado (${summaryTasks.length} Tareas)</span>
             </div>
             <div class="task-list">${taskItemsHtml}</div>
         </div>
