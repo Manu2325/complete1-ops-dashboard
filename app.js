@@ -321,13 +321,12 @@ function renderWeeklyTab() {
         return;
     }
 
-    // Calcular semana actual y las 2 semanas siguientes
     const today = new Date();
     const currentWeekInfo = getWeekNumber(today);
     const currentWeekNum = currentWeekInfo.week;
     const currentYear = currentWeekInfo.year;
 
-    // Permitir semana actual + 2 semanas a futuro (máximo 3 semanas)
+    // Rango de semanas a proyectar (Semana Actual, Semana +1, Semana +2)
     const allowedWeeks = [
         currentWeekNum,
         currentWeekNum + 1,
@@ -337,34 +336,47 @@ function renderWeeklyTab() {
     const weeksGroup = {};
 
     userTasks.forEach(task => {
-        let taskDateStr = task.date;
-        
         if (task.frequency === "weekly" && task.dayOfWeek) {
-            const now = new Date();
-            const currentDay = now.getDay() || 7;
-            const targetDay = parseInt(task.dayOfWeek);
-            let diff = targetDay - currentDay;
-            const tempDate = new Date();
-            tempDate.setDate(now.getDate() + diff);
-            taskDateStr = tempDate.toISOString().split('T')[0];
-        }
+            // PROYECTAR LA TAREA SEMANAL EN CADA UNA DE LAS SEMANAS DEL RANGO
+            allowedWeeks.forEach(weekNum => {
+                const now = new Date();
+                const currentDay = now.getDay() || 7;
+                const targetDay = parseInt(task.dayOfWeek);
+                
+                // Diferencia en días hacia el objetivo de esta semana + semanas futuras
+                let weekOffset = (weekNum - currentWeekNum) * 7;
+                let diff = targetDay - currentDay + weekOffset;
 
-        if (!taskDateStr) taskDateStr = getTodayString();
+                const tempDate = new Date();
+                tempDate.setDate(now.getDate() + diff);
+                const taskDateStr = tempDate.toISOString().split('T')[0];
 
-        const taskDate = new Date(taskDateStr + "T00:00:00");
-        const weekInfo = getWeekNumber(taskDate);
+                const key = `Semana ${weekNum} - Año ${currentYear}` + (weekNum === currentWeekNum ? " (Semana Actual)" : "");
 
-        // FILTRO: Mostrar solo si es del año actual y está dentro del rango de 3 semanas (actual + 2 futuras)
-        if (weekInfo.year === currentYear && allowedWeeks.includes(weekInfo.week)) {
-            const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}` + (weekInfo.week === currentWeekNum ? " (Semana Actual)" : "");
+                if (!weeksGroup[key]) weeksGroup[key] = [];
+                
+                // Evitar duplicados si la regla ya existe
+                if (!weeksGroup[key].some(t => t.id === task.id)) {
+                    weeksGroup[key].push({ ...task, displayDate: taskDateStr });
+                }
+            });
+        } else {
+            // TAREAS ONE-TIME O MONTHLY ASIGNADAS A UNA FECHA ESPECÍFICA
+            let taskDateStr = task.date || getTodayString();
+            const taskDate = new Date(taskDateStr + "T00:00:00");
+            const weekInfo = getWeekNumber(taskDate);
 
-            if (!weeksGroup[key]) weeksGroup[key] = [];
-            weeksGroup[key].push({ ...task, displayDate: taskDateStr });
+            if (weekInfo.year === currentYear && allowedWeeks.includes(weekInfo.week)) {
+                const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}` + (weekInfo.week === currentWeekNum ? " (Semana Actual)" : "");
+
+                if (!weeksGroup[key]) weeksGroup[key] = [];
+                weeksGroup[key].push({ ...task, displayDate: taskDateStr });
+            }
         }
     });
 
     if (Object.keys(weeksGroup).length === 0) {
-        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas agendadas para la semana actual ni las próximas 2 semanas.</div>`;
+        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas agendadas para la semana actual ni las próximas semanas.</div>`;
         return;
     }
 
