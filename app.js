@@ -860,14 +860,13 @@ function deleteTask(id, currentDate) {
     }
 }
 
-// CREACIÓN DE TAREA CON SOPORTE DE ASIGNACIÓN A CUALQUIER SUPERVISOR
+// CREACIÓN DE TAREA CON ASIGNACIÓN DIRECTA SIN CONTAMINAR LA VISTA LOCAL
 function addNewCustomTask() {
     const title = document.getElementById("newTaskTitle").value.trim();
     const sub = document.getElementById("newTaskSub").value.trim();
     const isUrgent = document.getElementById("newTaskUrgent").checked;
     const freq = document.getElementById("taskFrequency").value;
 
-    // Obtener el perfil destino (Si es Manager puede elegir, si no es Manager asigna a sí mismo)
     const currentProfile = profiles[currentUser];
     let targetUserId = currentUser;
 
@@ -913,24 +912,26 @@ function addNewCustomTask() {
     };
 
     if (targetUserId === currentUser) {
+        // Asignación propia: Actualizar arreglos locales y guardar
         userTasks.push(newTask);
         saveUserTasksInCloud();
     } else {
-        // Asignación directa en Firebase para el supervisor seleccionado
-        db.ref(`tasks/${targetUserId}`).once("value", snapshot => {
-            const data = snapshot.val() || {};
-            let targetTasks = data.userTasks || [];
-            let targetCompleted = data.completedTasks || {};
-
-            targetTasks.push(newTask);
-
-            db.ref(`tasks/${targetUserId}`).set({
-                userTasks: targetTasks,
-                completedTasks: targetCompleted
-            });
+        // Asignación a tercero: Usar transacción en Firebase para no alterar las variables locales
+        db.ref(`tasks/${targetUserId}/userTasks`).transaction(existingTasks => {
+            existingTasks = existingTasks || [];
+            existingTasks.push(newTask);
+            return existingTasks;
+        }, (error, committed) => {
+            if (error) {
+                console.error("Error al asignar tarea:", error);
+            } else if (committed) {
+                // Volver a renderizar únicamente las tareas propias de Adrian sin refrescar
+                renderTasks();
+            }
         });
     }
 
+    // Limpiar campos del formulario
     document.getElementById("newTaskTitle").value = "";
     document.getElementById("newTaskSub").value = "";
     document.getElementById("newTaskUrgent").checked = false;
