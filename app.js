@@ -313,7 +313,9 @@ function isTaskActiveForDate(task, targetDateStr) {
     
     if (freq === "weekly") {
         const targetDate = new Date(targetDateStr + "T00:00:00");
-        const targetDay = targetDate.getDay(); 
+        let targetDay = targetDate.getDay(); // 0: Dom, 1: Lun, 2: Mar...
+        if (targetDay === 0) targetDay = 7;  // Dom -> 7
+        
         const taskDay = parseInt(task.dayOfWeek);
         return targetDay === taskDay;
     } 
@@ -417,21 +419,23 @@ function renderWeeklyTab() {
 
     const weeksGroup = {};
 
+    // Obtener la fecha del lunes de la semana actual como punto de referencia base
+    const currentDayOfWeek = today.getDay() || 7; // 1: Lun, ..., 6: Sáb, 7: Dom
+    const mondayOfCurrentWeek = new Date(today);
+    mondayOfCurrentWeek.setDate(today.getDate() - (currentDayOfWeek - 1));
+
     userTasks.forEach(task => {
         if (task.frequency === "weekly" && task.dayOfWeek) {
-            allowedWeeks.forEach(weekNum => {
-                const now = new Date();
-                const currentDay = now.getDay() || 7;
-                const targetDay = parseInt(task.dayOfWeek);
-                
-                let weekOffset = (weekNum - currentWeekNum) * 7;
-                let diff = targetDay - currentDay + weekOffset;
+            const targetDay = parseInt(task.dayOfWeek); // 1: Lun, 2: Mar, 3: Mié, 4: Jue, 5: Vie
 
-                const tempDate = new Date();
-                tempDate.setDate(now.getDate() + diff);
+            allowedWeeks.forEach(weekNum => {
+                const weekOffset = (weekNum - currentWeekNum) * 7;
+                const tempDate = new Date(mondayOfCurrentWeek);
+                
+                // Sumar los días a partir del Lunes base (targetDay - 1)
+                tempDate.setDate(mondayOfCurrentWeek.getDate() + weekOffset + (targetDay - 1));
                 const taskDateStr = tempDate.toISOString().split('T')[0];
 
-                // FILTRO CLAVE: Solo mostrar si la fecha es de HOY en adelante (no dias pasados)
                 if (taskDateStr >= todayStr && (!task.excludedDates || !task.excludedDates.includes(taskDateStr))) {
                     const key = `Semana ${weekNum} - Año ${currentYear}` + (weekNum === currentWeekNum ? " (Semana Actual)" : "");
 
