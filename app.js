@@ -417,11 +417,14 @@ function renderWeeklyTab() {
     const weeksGroup = {};
 
     userTasks.forEach(task => {
-        if (task.frequency === "weekly" && task.dayOfWeek) {
+        const isWeeklyFreq = task.frequency === "weekly" || (task.dayOfWeek && task.dayOfWeek !== "");
+
+        if (isWeeklyFreq) {
+            const targetDay = parseInt(task.dayOfWeek || 1);
+
             allowedWeeks.forEach(weekNum => {
                 const now = new Date();
                 const currentDay = now.getDay() || 7;
-                const targetDay = parseInt(task.dayOfWeek);
                 
                 let weekOffset = (weekNum - currentWeekNum) * 7;
                 let diff = targetDay - currentDay + weekOffset;
@@ -434,7 +437,7 @@ function renderWeeklyTab() {
                     const key = `Semana ${weekNum} - Año ${currentYear}` + (weekNum === currentWeekNum ? " (Semana Actual)" : "");
 
                     if (!weeksGroup[key]) weeksGroup[key] = [];
-                    if (!weeksGroup[key].some(t => t.id === task.id)) {
+                    if (!weeksGroup[key].some(t => t.id === task.id && t.displayDate === taskDateStr)) {
                         weeksGroup[key].push({ ...task, displayDate: taskDateStr });
                     }
                 }
