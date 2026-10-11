@@ -404,6 +404,7 @@ function renderWeeklyTab() {
     }
 
     const today = new Date();
+    const todayStr = getTodayString();
     const currentWeekInfo = getWeekNumber(today);
     const currentWeekNum = currentWeekInfo.week;
     const currentYear = currentWeekInfo.year;
@@ -417,14 +418,11 @@ function renderWeeklyTab() {
     const weeksGroup = {};
 
     userTasks.forEach(task => {
-        const isWeeklyFreq = task.frequency === "weekly" || (task.dayOfWeek && task.dayOfWeek !== "");
-
-        if (isWeeklyFreq) {
-            const targetDay = parseInt(task.dayOfWeek || 1);
-
+        if (task.frequency === "weekly" && task.dayOfWeek) {
             allowedWeeks.forEach(weekNum => {
                 const now = new Date();
                 const currentDay = now.getDay() || 7;
+                const targetDay = parseInt(task.dayOfWeek);
                 
                 let weekOffset = (weekNum - currentWeekNum) * 7;
                 let diff = targetDay - currentDay + weekOffset;
@@ -433,7 +431,8 @@ function renderWeeklyTab() {
                 tempDate.setDate(now.getDate() + diff);
                 const taskDateStr = tempDate.toISOString().split('T')[0];
 
-                if (!task.excludedDates || !task.excludedDates.includes(taskDateStr)) {
+                // FILTRO CLAVE: Solo mostrar si la fecha es de HOY en adelante (no dias pasados)
+                if (taskDateStr >= todayStr && (!task.excludedDates || !task.excludedDates.includes(taskDateStr))) {
                     const key = `Semana ${weekNum} - Año ${currentYear}` + (weekNum === currentWeekNum ? " (Semana Actual)" : "");
 
                     if (!weeksGroup[key]) weeksGroup[key] = [];
@@ -447,7 +446,7 @@ function renderWeeklyTab() {
             const month = today.getMonth();
             const taskDateStr = getPreviousBusinessDay(year, month, parseInt(task.dayOfMonth));
 
-            if (!task.excludedDates || !task.excludedDates.includes(taskDateStr)) {
+            if (taskDateStr >= todayStr && (!task.excludedDates || !task.excludedDates.includes(taskDateStr))) {
                 const weekInfo = getWeekNumber(new Date(taskDateStr + "T00:00:00"));
 
                 if (weekInfo.year === currentYear && allowedWeeks.includes(weekInfo.week)) {
@@ -540,6 +539,7 @@ function renderMonthlyTab() {
 
     const monthsGroup = {};
     const now = new Date();
+    const todayStr = getTodayString();
 
     userTasks.forEach(task => {
         if (task.frequency === "weekly" && task.dayOfWeek) {
@@ -556,7 +556,8 @@ function renderMonthlyTab() {
 
                     if (dayOfWeekNum === targetDay) {
                         const dateStr = tempDate.toISOString().split('T')[0];
-                        if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
+                        // FILTRO CLAVE: Ocurrencias del mes solo desde la fecha actual en adelante
+                        if (dateStr >= todayStr && (!task.excludedDates || !task.excludedDates.includes(dateStr))) {
                             const monthName = tempDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
                             const key = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
@@ -572,7 +573,7 @@ function renderMonthlyTab() {
                 const month = now.getMonth() + monthOffset;
                 const dateStr = getPreviousBusinessDay(year, month, parseInt(task.dayOfMonth));
 
-                if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
+                if (dateStr >= todayStr && (!task.excludedDates || !task.excludedDates.includes(dateStr))) {
                     const monthName = new Date(dateStr + "T00:00:00").toLocaleString('es-ES', { month: 'long', year: 'numeric' });
                     const key = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
@@ -678,6 +679,7 @@ function renderSummaryTab() {
 
     const summaryTasks = [];
     const now = new Date();
+    const todayStr = getTodayString();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
 
@@ -692,7 +694,7 @@ function renderSummaryTab() {
 
                 if (dayOfWeekNum === targetDay) {
                     const dateStr = tempDate.toISOString().split('T')[0];
-                    if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
+                    if (dateStr >= todayStr && (!task.excludedDates || !task.excludedDates.includes(dateStr))) {
                         summaryTasks.push({ ...task, displayDate: dateStr });
                     }
                 }
@@ -700,7 +702,7 @@ function renderSummaryTab() {
         } else if (task.frequency === "monthly" && task.dayOfMonth) {
             const dateStr = getPreviousBusinessDay(currentYear, currentMonth, parseInt(task.dayOfMonth));
 
-            if (!task.excludedDates || !task.excludedDates.includes(dateStr)) {
+            if (dateStr >= todayStr && (!task.excludedDates || !task.excludedDates.includes(dateStr))) {
                 summaryTasks.push({ ...task, displayDate: dateStr });
             }
         } else {
