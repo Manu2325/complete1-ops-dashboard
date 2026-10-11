@@ -696,7 +696,7 @@ function renderSummaryTab() {
     let filteredTasks = [...summaryTasks];
 
     if (filter === "pending") {
-        filteredTasks = filteredTasks.filter(t => !completedTasks[`${t.id}_${t.displayDate}`] && !completedTasks[t.id]);
+        filteredTasks = filteredTasks.filter(t => !completedTasks[`${t.id}_${t.displayDate}`]);
     } else if (filter === "urgent") {
         filteredTasks = filteredTasks.filter(t => t.urgent);
     }
@@ -706,12 +706,13 @@ function renderSummaryTab() {
         return;
     }
 
+    // EVALUACIÓN ESTRICTA POR INSTANCIA DE FECHA ESPECÍFICA
     filteredTasks.sort((a, b) => {
         const aInstanceId = `${a.id}_${a.displayDate}`;
         const bInstanceId = `${b.id}_${b.displayDate}`;
 
-        const aCompleted = !!(completedTasks[aInstanceId] || completedTasks[a.id]);
-        const bCompleted = !!(completedTasks[bInstanceId] || completedTasks[b.id]);
+        const aCompleted = !!completedTasks[aInstanceId];
+        const bCompleted = !!completedTasks[bInstanceId];
 
         if (aCompleted !== bCompleted) {
             return aCompleted ? 1 : -1;
@@ -727,8 +728,8 @@ function renderSummaryTab() {
     let taskItemsHtml = "";
     filteredTasks.forEach(task => {
         const instanceId = `${task.id}_${task.displayDate}`;
-        const isChecked = (completedTasks[instanceId] || completedTasks[task.id]) ? "checked" : "";
-        const completedClass = (completedTasks[instanceId] || completedTasks[task.id]) ? "completed" : "";
+        const isChecked = completedTasks[instanceId] ? "checked" : "";
+        const completedClass = completedTasks[instanceId] ? "completed" : "";
         const urgentClass = task.urgent ? "urgent" : "";
 
         let freqBadge = "";
