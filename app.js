@@ -406,9 +406,10 @@ function renderWeeklyTab() {
     }
 
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalizar a medianoche local
     const todayStr = getTodayString();
     
-    // Obtener el Lunes de la semana actual en zona horaria local
+    // Obtener el Lunes de la semana actual
     const currentDay = today.getDay() || 7; // 1: Lun, 2: Mar, ..., 7: Dom
     const mondayCurrentWeek = new Date(today);
     mondayCurrentWeek.setDate(today.getDate() - (currentDay - 1));
@@ -419,20 +420,31 @@ function renderWeeklyTab() {
         if (task.frequency === "weekly" && task.dayOfWeek) {
             const targetDay = parseInt(task.dayOfWeek); // 1: Lun, 2: Mar, 3: Mié, 4: Jue, 5: Vie
 
-            // Proyectar para Semana Actual (0), Semana +1 (1) y Semana +2 (2)
-            for (let weekOffset = 0; weekOffset < 3; weekOffset++) {
+            // Proyectar para 4 semanas consecutivas hacia el futuro
+            for (let weekOffset = 0; weekOffset < 4; weekOffset++) {
                 const tempDate = new Date(mondayCurrentWeek);
                 tempDate.setDate(mondayCurrentWeek.getDate() + (weekOffset * 7) + (targetDay - 1));
                 
-                const taskDateStr = tempDate.toISOString().split('T')[0];
-                const weekInfo = getWeekNumber(tempDate);
+                const dateYear = tempDate.getFullYear();
+                const dateMonth = String(tempDate.getMonth() + 1).padStart(2, '0');
+                const dateDay = String(tempDate.getDate()).padStart(2, '0');
+                const taskDateStr = `${dateYear}-${dateMonth}-${dateDay}`;
 
                 if (taskDateStr >= todayStr && (!task.excludedDates || !task.excludedDates.includes(taskDateStr))) {
-                    const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}` + (weekOffset === 0 ? " (Semana Actual)" : "");
+                    const weekInfo = getWeekNumber(tempDate);
+                    const weekKey = `Semana ${weekInfo.week} - Año ${weekInfo.year}`;
 
-                    if (!weeksGroup[key]) weeksGroup[key] = [];
-                    if (!weeksGroup[key].some(t => t.id === task.id && t.displayDate === taskDateStr)) {
-                        weeksGroup[key].push({ ...task, displayDate: taskDateStr });
+                    if (!weeksGroup[weekKey]) {
+                        weeksGroup[weekKey] = {
+                            title: weekKey + (weekOffset === 0 ? " (Semana Actual)" : ""),
+                            weekNum: weekInfo.week,
+                            year: weekInfo.year,
+                            tasks: []
+                        };
+                    }
+
+                    if (!weeksGroup[weekKey].tasks.some(t => t.id === task.id && t.displayDate === taskDateStr)) {
+                        weeksGroup[weekKey].tasks.push({ ...task, displayDate: taskDateStr });
                     }
                 }
             }
@@ -444,34 +456,57 @@ function renderWeeklyTab() {
             if (taskDateStr >= todayStr && (!task.excludedDates || !task.excludedDates.includes(taskDateStr))) {
                 const taskDate = new Date(taskDateStr + "T00:00:00");
                 const weekInfo = getWeekNumber(taskDate);
+                const weekKey = `Semana ${weekInfo.week} - Año ${weekInfo.year}`;
 
-                const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}`;
-
-                if (!weeksGroup[key]) weeksGroup[key] = [];
-                weeksGroup[key].push({ ...task, displayDate: taskDateStr });
+                if (!weeksGroup[weekKey]) {
+                    weeksGroup[weekKey] = {
+                        title: weekKey,
+                        weekNum: weekInfo.week,
+                        year: weekInfo.year,
+                        tasks: []
+                    };
+                }
+                weeksGroup[weekKey].tasks.push({ ...task, displayDate: taskDateStr });
             }
         } else {
             let taskDateStr = task.date || getTodayString();
             if (!task.excludedDates || !task.excludedDates.includes(taskDateStr)) {
                 const taskDate = new Date(taskDateStr + "T00:00:00");
                 const weekInfo = getWeekNumber(taskDate);
+                const weekKey = `Semana ${weekInfo.week} - Año ${weekInfo.year}`;
 
-                const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}`;
-
-                if (!weeksGroup[key]) weeksGroup[key] = [];
-                weeksGroup[key].push({ ...task, displayDate: taskDateStr });
+                if (!weeksGroup[weekKey]) {
+                    weeksGroup[weekKey] = {
+                        title: weekKey,
+                        weekNum: weekInfo.week,
+                        year: weekInfo.year,
+                        tasks: []
+                    };
+                }
+                weeksGroup[weekKey].tasks.push({ ...task, displayDate: taskDateStr });
             }
         }
     });
 
     if (Object.keys(weeksGroup).length === 0) {
-        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas agendadas para la semana actual ni las próximas semanas.</div>`;
+        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.875rem;">No hay tareas agendadas para las próximas semanas.</div>`;
         return;
     }
 
+    // ORDENAR LAS SEMANAS CRONOLÓGICAMENTE DE MENOR A MAYOR (Semana 41, 42, 43, 44)
+    const sortedWeekKeys = Object.keys(weeksGroup).sort((a, b) => {
+        const weekA = weeksGroup[a];
+        const weekB = weeksGroup[b];
+        if (weekA.year !== weekB.year) return weekA.year - weekB.year;
+        return weekA.weekNum - weekB.weekNum;
+    });
+
     let html = "";
-    for (const weekTitle in weeksGroup) {
-        const rawTasks = weeksGroup[weekTitle];
+    sortedWeekKeys.forEach(weekKey => {
+        const group = weeksGroup[weekKey];
+        const rawTasks = group.tasks;
+        
+        // Ordenamiento interno de tareas por prioridad
         const sortedTasks = sortTasksByPriority(rawTasks);
         
         let completedCount = 0;
@@ -511,13 +546,13 @@ function renderWeeklyTab() {
         html += `
             <div class="group-section">
                 <div class="group-header">
-                    <span>📅 ${weekTitle}</span>
+                    <span>📅 ${group.title}</span>
                     <span>${completedCount} / ${rawTasks.length} Completadas</span>
                 </div>
                 <div class="task-list">${taskItemsHtml}</div>
             </div>
         `;
-    }
+    });
 
     container.innerHTML = html;
 }
