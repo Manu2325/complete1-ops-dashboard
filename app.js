@@ -407,58 +407,48 @@ function renderWeeklyTab() {
 
     const today = new Date();
     const todayStr = getTodayString();
-    const currentWeekInfo = getWeekNumber(today);
-    const currentWeekNum = currentWeekInfo.week;
-    const currentYear = currentWeekInfo.year;
-
-    const allowedWeeks = [
-        currentWeekNum,
-        currentWeekNum + 1,
-        currentWeekNum + 2
-    ];
+    
+    // Obtener el Lunes de la semana actual en zona horaria local
+    const currentDay = today.getDay() || 7; // 1: Lun, 2: Mar, ..., 7: Dom
+    const mondayCurrentWeek = new Date(today);
+    mondayCurrentWeek.setDate(today.getDate() - (currentDay - 1));
 
     const weeksGroup = {};
-
-    // Obtener la fecha del lunes de la semana actual como punto de referencia base
-    const currentDayOfWeek = today.getDay() || 7; // 1: Lun, ..., 6: Sáb, 7: Dom
-    const mondayOfCurrentWeek = new Date(today);
-    mondayOfCurrentWeek.setDate(today.getDate() - (currentDayOfWeek - 1));
 
     userTasks.forEach(task => {
         if (task.frequency === "weekly" && task.dayOfWeek) {
             const targetDay = parseInt(task.dayOfWeek); // 1: Lun, 2: Mar, 3: Mié, 4: Jue, 5: Vie
 
-            allowedWeeks.forEach(weekNum => {
-                const weekOffset = (weekNum - currentWeekNum) * 7;
-                const tempDate = new Date(mondayOfCurrentWeek);
+            // Proyectar para Semana Actual (0), Semana +1 (1) y Semana +2 (2)
+            for (let weekOffset = 0; weekOffset < 3; weekOffset++) {
+                const tempDate = new Date(mondayCurrentWeek);
+                tempDate.setDate(mondayCurrentWeek.getDate() + (weekOffset * 7) + (targetDay - 1));
                 
-                // Sumar los días a partir del Lunes base (targetDay - 1)
-                tempDate.setDate(mondayOfCurrentWeek.getDate() + weekOffset + (targetDay - 1));
                 const taskDateStr = tempDate.toISOString().split('T')[0];
+                const weekInfo = getWeekNumber(tempDate);
 
                 if (taskDateStr >= todayStr && (!task.excludedDates || !task.excludedDates.includes(taskDateStr))) {
-                    const key = `Semana ${weekNum} - Año ${currentYear}` + (weekNum === currentWeekNum ? " (Semana Actual)" : "");
+                    const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}` + (weekOffset === 0 ? " (Semana Actual)" : "");
 
                     if (!weeksGroup[key]) weeksGroup[key] = [];
                     if (!weeksGroup[key].some(t => t.id === task.id && t.displayDate === taskDateStr)) {
                         weeksGroup[key].push({ ...task, displayDate: taskDateStr });
                     }
                 }
-            });
+            }
         } else if (task.frequency === "monthly" && task.dayOfMonth) {
             const year = today.getFullYear();
             const month = today.getMonth();
             const taskDateStr = getPreviousBusinessDay(year, month, parseInt(task.dayOfMonth));
 
             if (taskDateStr >= todayStr && (!task.excludedDates || !task.excludedDates.includes(taskDateStr))) {
-                const weekInfo = getWeekNumber(new Date(taskDateStr + "T00:00:00"));
+                const taskDate = new Date(taskDateStr + "T00:00:00");
+                const weekInfo = getWeekNumber(taskDate);
 
-                if (weekInfo.year === currentYear && allowedWeeks.includes(weekInfo.week)) {
-                    const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}` + (weekInfo.week === currentWeekNum ? " (Semana Actual)" : "");
+                const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}`;
 
-                    if (!weeksGroup[key]) weeksGroup[key] = [];
-                    weeksGroup[key].push({ ...task, displayDate: taskDateStr });
-                }
+                if (!weeksGroup[key]) weeksGroup[key] = [];
+                weeksGroup[key].push({ ...task, displayDate: taskDateStr });
             }
         } else {
             let taskDateStr = task.date || getTodayString();
@@ -466,12 +456,10 @@ function renderWeeklyTab() {
                 const taskDate = new Date(taskDateStr + "T00:00:00");
                 const weekInfo = getWeekNumber(taskDate);
 
-                if (weekInfo.year === currentYear && allowedWeeks.includes(weekInfo.week)) {
-                    const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}` + (weekInfo.week === currentWeekNum ? " (Semana Actual)" : "");
+                const key = `Semana ${weekInfo.week} - Año ${weekInfo.year}`;
 
-                    if (!weeksGroup[key]) weeksGroup[key] = [];
-                    weeksGroup[key].push({ ...task, displayDate: taskDateStr });
-                }
+                if (!weeksGroup[key]) weeksGroup[key] = [];
+                weeksGroup[key].push({ ...task, displayDate: taskDateStr });
             }
         }
     });
