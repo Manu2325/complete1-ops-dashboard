@@ -109,6 +109,7 @@ function init() {
             db.ref("profiles").set(defaultProfiles);
         }
         renderUserSelector();
+        populateAssignToDropdown();
         loadUserProfile();
     });
 
@@ -122,6 +123,15 @@ function populateMonthlyDays() {
     for (let i = 1; i <= 31; i++) {
         select.innerHTML += `<option value="${i}">Día ${i}</option>`;
     }
+}
+
+function populateAssignToDropdown() {
+    const select = document.getElementById("assignToUser");
+    if (!select) return;
+    select.innerHTML = Object.keys(profiles).map(id => {
+        const p = profiles[id];
+        return `<option value="${p.id}">${p.name} (${p.role})</option>`;
+    }).join('');
 }
 
 function toggleFrequencyInputs() {
@@ -222,10 +232,16 @@ function loadUserProfile() {
     document.getElementById("userRoleSubtitle").innerText = `${profile.role} | ${profile.subtitle}`;
     
     const btnManage = document.getElementById("btnManageTeam");
+    const containerAssignTo = document.getElementById("containerAssignTo");
+
     if (profile.isManager) {
         btnManage.style.display = "inline-block";
+        if (containerAssignTo) containerAssignTo.style.display = "flex";
+        const assignSelect = document.getElementById("assignToUser");
+        if (assignSelect) assignSelect.value = currentUser;
     } else {
         btnManage.style.display = "none";
+        if (containerAssignTo) containerAssignTo.style.display = "none";
     }
 
     listenUserTasksInCloud();
@@ -254,14 +270,13 @@ function getNextBusinessDay(dateString) {
     return date.toISOString().split('T')[0];
 }
 
-// OBTENER EL DÍA HÁBIL ANTERIOR (Si cae Sábado o Domingo, lo pasa a Viernes)
 function getPreviousBusinessDay(year, monthIndex, dayOfMonth) {
     let date = new Date(year, monthIndex, dayOfMonth);
-    let dayOfWeek = date.getDay(); // 0: Dom, 6: Sáb
+    let dayOfWeek = date.getDay();
 
-    if (dayOfWeek === 0) { // Domingo -> Viernes (-2 días)
+    if (dayOfWeek === 0) {
         date.setDate(date.getDate() - 2);
-    } else if (dayOfWeek === 6) { // Sábado -> Viernes (-1 día)
+    } else if (dayOfWeek === 6) {
         date.setDate(date.getDate() - 1);
     }
 
@@ -706,7 +721,6 @@ function renderSummaryTab() {
         return;
     }
 
-    // EVALUACIÓN ESTRICTA POR INSTANCIA DE FECHA ESPECÍFICA
     filteredTasks.sort((a, b) => {
         const aInstanceId = `${a.id}_${a.displayDate}`;
         const bInstanceId = `${b.id}_${b.displayDate}`;
@@ -814,11 +828,23 @@ function deleteTask(id, currentDate) {
     }
 }
 
+// CREACIÓN DE TAREA CON SOPORTE DE ASIGNACIÓN A CUALQUIER SUPERVISOR
 function addNewCustomTask() {
     const title = document.getElementById("newTaskTitle").value.trim();
     const sub = document.getElementById("newTaskSub").value.trim();
     const isUrgent = document.getElementById("newTaskUrgent").checked;
     const freq = document.getElementById("taskFrequency").value;
+
+    // Obtener el perfil destino (Si es Manager puede elegir, si no es Manager asigna a sí mismo)
+    const currentProfile = profiles[currentUser];
+    let targetUserId = currentUser;
+
+    if (currentProfile && currentProfile.isManager) {
+        const assignSelect = document.getElementById("assignToUser");
+        if (assignSelect && assignSelect.value) {
+            targetUserId = assignSelect.value;
+        }
+    }
 
     if (!title) {
         alert("Por favor ingresa un nombre para la tarea.");
@@ -842,8 +868,7 @@ function addNewCustomTask() {
     }
 
     const newId = "task_" + Date.now();
-    
-    userTasks.push({ 
+    const newTask = {
         id: newId, 
         date: calculatedDate, 
         dayOfWeek: dayOfWeek,
@@ -853,15 +878,33 @@ function addNewCustomTask() {
         urgent: isUrgent,
         frequency: freq,
         excludedDates: []
-    });
+    };
 
-    saveUserTasksInCloud();
+    if (targetUserId === currentUser) {
+        userTasks.push(newTask);
+        saveUserTasksInCloud();
+    } else {
+        // Asignación directa en Firebase para el supervisor seleccionado
+        db.ref(`tasks/${targetUserId}`).once("value", snapshot => {
+            const data = snapshot.val() || {};
+            let targetTasks = data.userTasks || [];
+            let targetCompleted = data.completedTasks || {};
+
+            targetTasks.push(newTask);
+
+            db.ref(`tasks/${targetUserId}`).set({
+                userTasks: targetTasks,
+                completedTasks: targetCompleted
+            });
+        });
+    }
 
     document.getElementById("newTaskTitle").value = "";
     document.getElementById("newTaskSub").value = "";
     document.getElementById("newTaskUrgent").checked = false;
     
-    alert(`Tarea creada con éxito como ${freq.toUpperCase()}.`);
+    const targetName = profiles[targetUserId] ? profiles[targetUserId].name : "Usuario";
+    alert(`Tarea creada con éxito para ${targetName}.`);
 }
 
 function updateDailyProgress(done, total) {
@@ -975,6 +1018,7 @@ function addNewSupervisor() {
     };
 
     saveProfilesInCloud();
+    populateAssignToDropdown();
     document.getElementById("newSupName").value = "";
     document.getElementById("newSupSub").value = "";
     alert(`Miembro ${name} agregado con éxito.`);
@@ -984,6 +1028,7 @@ function removeSupervisor(id) {
     if (confirm(`¿Estás seguro de que deseas eliminar a ${profiles[id].name} del dashboard?`)) {
         delete profiles[id];
         saveProfilesInCloud();
+        populateAssignToDropdown();
         
         if (currentUser === id) currentUser = "adrian";
         localStorage.setItem("eqfp_current_user", currentUser);

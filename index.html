@@ -96,6 +96,12 @@
             <select id="newTaskDayOfMonth" class="form-select-sm"></select>
         </div>
 
+        <!-- Selector de Asignación de Usuario (Exclusivo para Operations Manager) -->
+        <div class="date-picker-group" id="containerAssignTo" style="display: none;">
+            <label for="assignToUser">Asignar a:</label>
+            <select id="assignToUser" class="form-select-sm"></select>
+        </div>
+
         <div class="urgent-checkbox-group">
             <input type="checkbox" id="newTaskUrgent">
             <label for="newTaskUrgent" style="color: var(--accent-danger); font-weight: bold; cursor: pointer;">🚨 Marcar Urgente</label>
