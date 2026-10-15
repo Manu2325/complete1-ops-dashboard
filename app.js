@@ -406,11 +406,11 @@ function renderWeeklyTab() {
     }
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalizar a medianoche local
+    today.setHours(0, 0, 0, 0);
     const todayStr = getTodayString();
     
-    // Obtener el Lunes de la semana actual
-    const currentDay = today.getDay() || 7; // 1: Lun, 2: Mar, ..., 7: Dom
+    // Obtenemos el Lunes de la semana actual
+    const currentDay = today.getDay() || 7;
     const mondayCurrentWeek = new Date(today);
     mondayCurrentWeek.setDate(today.getDate() - (currentDay - 1));
 
@@ -418,9 +418,8 @@ function renderWeeklyTab() {
 
     userTasks.forEach(task => {
         if (task.frequency === "weekly" && task.dayOfWeek) {
-            const targetDay = parseInt(task.dayOfWeek); // 1: Lun, 2: Mar, 3: Mié, 4: Jue, 5: Vie
+            const targetDay = parseInt(task.dayOfWeek);
 
-            // Proyectar para 4 semanas consecutivas hacia el futuro
             for (let weekOffset = 0; weekOffset < 4; weekOffset++) {
                 const tempDate = new Date(mondayCurrentWeek);
                 tempDate.setDate(mondayCurrentWeek.getDate() + (weekOffset * 7) + (targetDay - 1));
@@ -430,6 +429,7 @@ function renderWeeklyTab() {
                 const dateDay = String(tempDate.getDate()).padStart(2, '0');
                 const taskDateStr = `${dateYear}-${dateMonth}-${dateDay}`;
 
+                // Mostrar solo tareas con fecha de hoy en adelante
                 if (taskDateStr >= todayStr && (!task.excludedDates || !task.excludedDates.includes(taskDateStr))) {
                     const weekInfo = getWeekNumber(tempDate);
                     const weekKey = `Semana ${weekInfo.week} - Año ${weekInfo.year}`;
@@ -470,7 +470,9 @@ function renderWeeklyTab() {
             }
         } else {
             let taskDateStr = task.date || getTodayString();
-            if (!task.excludedDates || !task.excludedDates.includes(taskDateStr)) {
+            
+            // FILTRO DE OCULTAMIENTO: Solo incluir tareas cuya fecha coincida con hoy o el futuro
+            if (taskDateStr >= todayStr && (!task.excludedDates || !task.excludedDates.includes(taskDateStr))) {
                 const taskDate = new Date(taskDateStr + "T00:00:00");
                 const weekInfo = getWeekNumber(taskDate);
                 const weekKey = `Semana ${weekInfo.week} - Año ${weekInfo.year}`;
@@ -493,7 +495,7 @@ function renderWeeklyTab() {
         return;
     }
 
-    // ORDENAR LAS SEMANAS CRONOLÓGICAMENTE DE MENOR A MAYOR (Semana 41, 42, 43, 44)
+    // Ordenar semanas de menor a mayor
     const sortedWeekKeys = Object.keys(weeksGroup).sort((a, b) => {
         const weekA = weeksGroup[a];
         const weekB = weeksGroup[b];
@@ -506,16 +508,32 @@ function renderWeeklyTab() {
         const group = weeksGroup[weekKey];
         const rawTasks = group.tasks;
         
-        // Ordenamiento interno de tareas por prioridad
-        const sortedTasks = sortTasksByPriority(rawTasks);
+        // ORDENAMIENTO ESTRICTO: 1° Pendientes Urgentes | 2° Pendientes Normales | 3° Completadas al fondo
+        rawTasks.sort((a, b) => {
+            const aInstanceId = `${a.id}_${a.displayDate}`;
+            const bInstanceId = `${b.id}_${b.displayDate}`;
+
+            const aCompleted = !!completedTasks[aInstanceId];
+            const bCompleted = !!completedTasks[bInstanceId];
+
+            if (aCompleted !== bCompleted) {
+                return aCompleted ? 1 : -1;
+            }
+
+            if (a.urgent !== b.urgent) {
+                return a.urgent ? -1 : 1;
+            }
+
+            return new Date(a.displayDate) - new Date(b.displayDate);
+        });
         
         let completedCount = 0;
-        sortedTasks.forEach(t => {
+        rawTasks.forEach(t => {
             if (completedTasks[`${t.id}_${t.displayDate}`]) completedCount++;
         });
 
         let taskItemsHtml = "";
-        sortedTasks.forEach(task => {
+        rawTasks.forEach(task => {
             const instanceId = `${task.id}_${task.displayDate}`;
             const isChecked = completedTasks[instanceId] ? "checked" : "";
             const completedClass = completedTasks[instanceId] ? "completed" : "";
