@@ -2,7 +2,7 @@ name: Cierre Nocturno Automático de Tareas (10:30 PM)
 
 on:
   schedule:
-    # Corre de Lunes a Viernes a las 10:30 PM (Hora de Colombia/Ecuador/Perú - UTC-5)
+    # Corre de Lunes a Viernes a las 10:30 PM (Hora de Colombia/Ecuador/Perú - UTC-5 / 3:30 AM UTC del día siguiente)
     - cron: '30 3 * * 2-6'
   workflow_dispatch: # Permite probarlo manualmente desde GitHub si se desea
 
@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ejecutar Reagendamiento en Firebase
+        env:
+          TZ: 'America/Bogota'
         run: |
           node -e '
           const https = require("https");
@@ -31,20 +33,56 @@ jobs:
               });
           }
 
+          function getTodayBogota() {
+              const options = { timeZone: "America/Bogota", year: "numeric", month: "2-digit", day: "2-digit" };
+              const formatter = new Intl.DateTimeFormat("en-CA", options);
+              return formatter.format(new Date());
+          }
+
           function getNextBusinessDay(dateStr) {
-              let date = new Date(dateStr + "T00:00:00Z");
-              let day = date.getUTCDay();
+              let parts = dateStr.split("-");
+              let date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+              let day = date.getUTCDay(); // 0: Dom, 5: Vie, 6: Sáb
+              
               if (day === 5) date.setUTCDate(date.getUTCDate() + 3); // Viernes a Lunes
               else if (day === 6) date.setUTCDate(date.getUTCDate() + 2); // Sábado a Lunes
               else date.setUTCDate(date.getUTCDate() + 1);
+              
               return date.toISOString().split("T")[0];
           }
 
+          function getPreviousBusinessDay(year, monthIndex, dayOfMonth) {
+              let date = new Date(year, monthIndex, dayOfMonth);
+              let dayOfWeek = date.getDay();
+              if (dayOfWeek === 0) date.setDate(date.getDate() - 2);
+              else if (dayOfWeek === 6) date.setDate(date.getDate() - 1);
+              return date.toISOString().split("T")[0];
+          }
+
+          function isTaskActiveForDate(task, targetDateStr) {
+              if (task.excludedDates && task.excludedDates.includes(targetDateStr)) return false;
+              const freq = task.frequency || "once";
+
+              if (freq === "once") return task.date === targetDateStr;
+              if (freq === "weekly") {
+                  const targetDate = new Date(targetDateStr + "T00:00:00");
+                  let targetDay = targetDate.getDay();
+                  if (targetDay === 0) targetDay = 7;
+                  return targetDay === parseInt(task.dayOfWeek);
+              }
+              if (freq === "monthly") {
+                  const targetDate = new Date(targetDateStr + "T00:00:00");
+                  const adjustedDateStr = getPreviousBusinessDay(targetDate.getFullYear(), targetDate.getMonth(), parseInt(task.dayOfMonth));
+                  return adjustedDateStr === targetDateStr;
+              }
+              return false;
+          }
+
           async function main() {
-              const todayStr = new Date().toISOString().split("T")[0];
+              const todayStr = getTodayBogota();
               const nextBusinessDay = getNextBusinessDay(todayStr);
 
-              console.log(`Procesando cierre para ${todayStr}. Siguiente día hábil: ${nextBusinessDay}`);
+              console.log(`Procesando cierre para Bogotá: ${todayStr}. Siguiente día hábil: ${nextBusinessDay}`);
 
               const profiles = await request(`${FIREBASE_DB_URL}/profiles.json`);
               if (!profiles) return console.log("No se encontraron perfiles.");
@@ -57,10 +95,28 @@ jobs:
                   let userTasks = tasksData.userTasks || (userProfile ? userProfile.tasks || [] : []);
                   let completedTasks = tasksData.completedTasks || {};
 
-                  const pending = userTasks.filter(t => t.date === todayStr && !completedTasks[t.id]);
+                  const tasksForToday = userTasks.filter(t => isTaskActiveForDate(t, todayStr));
+                  const pending = tasksForToday.filter(t => !completedTasks[`${t.id}_${todayStr}`]);
 
                   if (pending.length > 0) {
-                      pending.forEach(t => t.date = nextBusinessDay);
+                      pending.forEach(task => {
+                          const freq = task.frequency || "once";
+                          if (freq === "once") {
+                              task.date = nextBusinessDay;
+                          } else {
+                              const carryOverId = `carry_${task.id}_${nextBusinessDay}`;
+                              if (!userTasks.some(t => t.id === carryOverId)) {
+                                  userTasks.push({
+                                      id: carryOverId,
+                                      frequency: "once",
+                                      date: nextBusinessDay,
+                                      title: `📌 [REAGENDADA] ${task.title}`,
+                                      sub: task.sub || "Tarea pendiente del día anterior",
+                                      urgent: task.urgent
+                                  });
+                              }
+                          }
+                      });
 
                       await request(`${FIREBASE_DB_URL}/tasks/${userId}.json`, { method: "PUT" }, {
                           userTasks: userTasks,
