@@ -2,8 +2,8 @@ name: Cierre Nocturno Automático de Tareas (10:30 PM)
 
 on:
   schedule:
-    # Corre de Lunes a Viernes a las 10:30 PM (Hora de Colombia/Ecuador/Perú - UTC-5 / 3:30 AM UTC del día siguiente)
-    - cron: '30 3 * * 2-6'
+    # Programado para ejecutarse a las 10:00 PM hora de Colombia (03:00 UTC del día siguiente)
+    - cron: '0 3 * * 2-6'
   workflow_dispatch: # Permite probarlo manualmente desde GitHub si se desea
 
 jobs:
@@ -33,10 +33,22 @@ jobs:
               });
           }
 
-          function getTodayBogota() {
-              const options = { timeZone: "America/Bogota", year: "numeric", month: "2-digit", day: "2-digit" };
-              const formatter = new Intl.DateTimeFormat("en-CA", options);
-              return formatter.format(new Date());
+          // Obtiene la fecha operativa exacta de Colombia (si corre de noche o madrugada, calcula el día de la jornada laboral)
+          function getTargetOperationalDate() {
+              const now = new Date();
+              // Obtener hora actual en Bogotá
+              const bogotaTimeStr = now.toLocaleString("en-US", { timeZone: "America/Bogota" });
+              const bogotaDate = new Date(bogotaTimeStr);
+
+              // Si corre entre la 00:00 y las 06:00 AM (por retraso en servidores UTC), la jornada que cerró corresponde al día anterior
+              if (bogotaDate.getHours() < 6) {
+                  bogotaDate.setDate(bogotaDate.getDate() - 1);
+              }
+
+              const year = bogotaDate.getFullYear();
+              const month = String(bogotaDate.getMonth() + 1).padStart(2, "0");
+              const day = String(bogotaDate.getDate()).padStart(2, "0");
+              return `${year}-${month}-${day}`;
           }
 
           function getNextBusinessDay(dateStr) {
@@ -79,10 +91,10 @@ jobs:
           }
 
           async function main() {
-              const todayStr = getTodayBogota();
-              const nextBusinessDay = getNextBusinessDay(todayStr);
+              const targetDateStr = getTargetOperationalDate();
+              const nextBusinessDay = getNextBusinessDay(targetDateStr);
 
-              console.log(`Procesando cierre para Bogotá: ${todayStr}. Siguiente día hábil: ${nextBusinessDay}`);
+              console.log(`Procesando jornada operativa: ${targetDateStr}. Moviendo pendientes al siguiente día hábil: ${nextBusinessDay}`);
 
               const profiles = await request(`${FIREBASE_DB_URL}/profiles.json`);
               if (!profiles) return console.log("No se encontraron perfiles.");
@@ -95,8 +107,8 @@ jobs:
                   let userTasks = tasksData.userTasks || (userProfile ? userProfile.tasks || [] : []);
                   let completedTasks = tasksData.completedTasks || {};
 
-                  const tasksForToday = userTasks.filter(t => isTaskActiveForDate(t, todayStr));
-                  const pending = tasksForToday.filter(t => !completedTasks[`${t.id}_${todayStr}`]);
+                  const tasksForToday = userTasks.filter(t => isTaskActiveForDate(t, targetDateStr));
+                  const pending = tasksForToday.filter(t => !completedTasks[`${t.id}_${targetDateStr}`]);
 
                   if (pending.length > 0) {
                       pending.forEach(task => {
@@ -129,7 +141,7 @@ jobs:
               }
 
               if (resumenAlertas.length > 0) {
-                  const msg = `🚨 *CIERRE NOCTURNO AUTOMÁTICO (10:30 PM)* 🚨\n\nFecha Original: *${todayStr}*\nReagendadas para: *${nextBusinessDay}* (Siguiente Día Hábil)\n\n*Resumen de Tareas Incompletas Reagendadas:*\n\n${resumenAlertas.join("\n\n")}\n\nLas tareas fueron reprogramadas en la agenda de cada usuario.`;
+                  const msg = `🚨 *CIERRE NOCTURNO AUTOMÁTICO* 🚨\n\nJornada Cerrada: *${targetDateStr}*\nReagendadas para: *${nextBusinessDay}* (Siguiente Día Hábil)\n\n*Resumen de Tareas Incompletas Reagendadas:*\n\n${resumenAlertas.join("\n\n")}\n\nLas tareas fueron reprogramadas en la agenda de cada usuario.`;
 
                   await request(GCHAT_WEBHOOK, {
                       method: "POST",
