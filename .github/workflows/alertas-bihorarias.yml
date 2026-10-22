@@ -1,0 +1,63 @@
+name: Alerta Bi-horaria de Resultados (9:00 AM - 5:00 PM)
+
+on:
+  schedule:
+    # 9:00 AM Colombia  = 14:00 UTC -> cron: '0 14 * * 1-5'
+    # 11:00 AM Colombia = 16:00 UTC -> cron: '0 16 * * 1-5'
+    # 1:00 PM Colombia  = 18:00 UTC -> cron: '0 18 * * 1-5'
+    # 3:00 PM Colombia  = 20:00 UTC -> cron: '0 20 * * 1-5'
+    # 5:00 PM Colombia  = 22:00 UTC -> cron: '0 22 * * 1-5'
+    - cron: '0 14 * * 1-5'
+    - cron: '0 16 * * 1-5'
+    - cron: '0 18 * * 1-5'
+    - cron: '0 20 * * 1-5'
+    - cron: '0 22 * * 1-5'
+  workflow_dispatch: # Permite probar la alerta manualmente desde GitHub
+
+jobs:
+  enviar-alerta-bihoraria:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notificar a Google Chat
+        env:
+          TZ: 'America/Bogota'
+        run: |
+          node -e '
+          const https = require("https");
+
+          const GCHAT_WEBHOOK = "https://chat.googleapis.com/v1/spaces/AAQAW2t94sc/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=2GZ-2ChSl1mMEhgh7uxocoMdZt07sC-3qki7uPKIPNs";
+
+          function request(url, options = {}, data = null) {
+              return new Promise((resolve, reject) => {
+                  const req = https.request(url, options, res => {
+                      let body = "";
+                      res.on("data", chunk => body += chunk);
+                      res.on("end", () => resolve(body ? JSON.parse(body) : {}));
+                  });
+                  req.on("error", reject);
+                  if (data) req.write(JSON.stringify(data));
+                  req.end();
+              });
+          }
+
+          async function main() {
+              const now = new Date();
+              const horaBogota = now.toLocaleTimeString("es-CO", { 
+                  timeZone: "America/Bogota", 
+                  hour: "2-digit", 
+                  minute: "2-digit",
+                  hour12: true 
+              });
+
+              const msg = `🚨 *ALERTA BI-HORARIA DE RESULTADOS* (${horaBogota}) 🚨\n\n*Equipo de Operaciones*, ha llegado la hora de actualizar y publicar los resultados de EQ & FP en los chats correspondientes.`;
+
+              await request(GCHAT_WEBHOOK, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json; charset=UTF-8" }
+              }, { text: msg });
+
+              console.log(`Alerta bi-horaria enviada a Google Chat a las ${horaBogota}`);
+          }
+
+          main().catch(console.error);
+          '
