@@ -1145,12 +1145,15 @@ function updateRealTimeTimers() {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
 
+// Notificación gestionada de forma centralizada por GitHub Actions
+    /*
     if (currentHour >= 9 && currentHour % 2 === 1 && currentMinute === 0) {
         if (ultimaHoraDisparada !== currentHour) {
             ultimaHoraDisparada = currentHour;
             publicarAlertaBihorariaAutomatica();
         }
     }
+    */
 
     if (currentHour === 22 && currentMinute === 30) {
         const todayStr = getTodayString();

@@ -42,8 +42,20 @@ jobs:
 
           async function main() {
               const now = new Date();
-              const horaBogota = now.toLocaleTimeString("es-CO", { 
-                  timeZone: "America/Bogota", 
+              // Obtener la hora actual en minutos transcurridos de la hora
+              const bogotaTimeStr = now.toLocaleString("en-US", { timeZone: "America/Bogota" });
+              const bogotaDate = new Date(bogotaTimeStr);
+              const minutes = bogotaDate.getMinutes();
+
+              // Tolerancia: Si la ejecución en GitHub sufre un retraso mayor a 20 minutos, omitir envío para evitar spam fuera de tiempo.
+              // Solo aplica cuando es ejecutado por el temporizador automatico (schedule)
+              const isManualRun = process.env.GITHUB_EVENT_NAME === "workflow_dispatch";
+              if (!isManualRun && minutes > 20) {
+                  console.log(`Ejecución cancelada por retraso excesivo en el servidor (${minutes} minutos tarde).`);
+                  return;
+              }
+
+              const horaBogota = bogotaDate.toLocaleTimeString("es-CO", { 
                   hour: "2-digit", 
                   minute: "2-digit",
                   hour12: true 
@@ -56,7 +68,7 @@ jobs:
                   headers: { "Content-Type": "application/json; charset=UTF-8" }
               }, { text: msg });
 
-              console.log(`Alerta bi-horaria enviada a Google Chat a las ${horaBogota}`);
+              console.log(`Alerta bi-horaria enviada con éxito a Google Chat a las ${horaBogota}`);
           }
 
           main().catch(console.error);
