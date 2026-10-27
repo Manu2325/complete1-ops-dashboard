@@ -2,17 +2,18 @@ name: Alerta Bi-horaria de Resultados (9:00 AM - 5:00 PM)
 
 on:
   schedule:
-    # 9:00 AM Colombia  = 14:00 UTC -> cron: '0 14 * * 1-5'
-    # 11:00 AM Colombia = 16:00 UTC -> cron: '0 16 * * 1-5'
-    # 1:00 PM Colombia  = 18:00 UTC -> cron: '0 18 * * 1-5'
-    # 3:00 PM Colombia  = 20:00 UTC -> cron: '0 20 * * 1-5'
-    # 5:00 PM Colombia  = 22:00 UTC -> cron: '0 22 * * 1-5'
-    - cron: '0 14 * * 1-5'
-    - cron: '0 16 * * 1-5'
-    - cron: '0 18 * * 1-5'
-    - cron: '0 20 * * 1-5'
-    - cron: '0 22 * * 1-5'
-  workflow_dispatch: # Permite probar la alerta manualmente desde GitHub
+    # Minuto 2 para evitar saturación de servidores en el minuto :00
+    # 9:00 AM Colombia  (14:02 UTC)
+    # 11:00 AM Colombia (16:02 UTC)
+    # 1:00 PM Colombia  (18:02 UTC)
+    # 3:00 PM Colombia  (20:02 UTC)
+    # 5:00 PM Colombia  (22:02 UTC)
+    - cron: '2 14 * * 1-5'
+    - cron: '2 16 * * 1-5'
+    - cron: '2 18 * * 1-5'
+    - cron: '2 20 * * 1-5'
+    - cron: '2 22 * * 1-5'
+  workflow_dispatch:
 
 jobs:
   enviar-alerta-bihoraria:
@@ -42,33 +43,32 @@ jobs:
 
           async function main() {
               const now = new Date();
-              // Obtener la hora actual en minutos transcurridos de la hora
               const bogotaTimeStr = now.toLocaleString("en-US", { timeZone: "America/Bogota" });
               const bogotaDate = new Date(bogotaTimeStr);
+              let hour = bogotaDate.getHours();
               const minutes = bogotaDate.getMinutes();
 
-              // Tolerancia: Si la ejecución en GitHub sufre un retraso mayor a 20 minutos, omitir envío para evitar spam fuera de tiempo.
-              // Solo aplica cuando es ejecutado por el temporizador automatico (schedule)
-              const isManualRun = process.env.GITHUB_EVENT_NAME === "workflow_dispatch";
-              if (!isManualRun && minutes > 20) {
-                  console.log(`Ejecución cancelada por retraso excesivo en el servidor (${minutes} minutos tarde).`);
-                  return;
+              // Si corre cerca de la siguiente hora (por ejemplo 10:55), redondear al bloque principal
+              if (minutes >= 45) {
+                  hour = (hour + 1) % 24;
               }
 
-              const horaBogota = bogotaDate.toLocaleTimeString("es-CO", { 
-                  hour: "2-digit", 
-                  minute: "2-digit",
-                  hour12: true 
-              });
+              // Normalizar a los bloques establecidos de la operacion
+              let blockLabel = "";
+              if (hour <= 9) blockLabel = "09:00 a. m.";
+              else if (hour <= 11) blockLabel = "11:00 a. m.";
+              else if (hour <= 13) blockLabel = "01:00 p. m.";
+              else if (hour <= 15) blockLabel = "03:00 p. m.";
+              else blockLabel = "05:00 p. m.";
 
-              const msg = `🚨 *ALERTA BI-HORARIA DE RESULTADOS* (${horaBogota}) 🚨\n\n*Equipo de Operaciones*, ha llegado la hora de actualizar y publicar los resultados de EQ & FP en los chats correspondientes.`;
+              const msg = `🚨 *ALERTA BI-HORARIA DE RESULTADOS* (${blockLabel}) 🚨\n\n*Equipo de Operaciones*, ha llegado la hora de actualizar y publicar los resultados de EQ & FP en los chats correspondientes.`;
 
               await request(GCHAT_WEBHOOK, {
                   method: "POST",
                   headers: { "Content-Type": "application/json; charset=UTF-8" }
               }, { text: msg });
 
-              console.log(`Alerta bi-horaria enviada con éxito a Google Chat a las ${horaBogota}`);
+              console.log(`Alerta bi-horaria enviada para el bloque ${blockLabel}. Hora real de ejecucion: ${bogotaDate.toLocaleTimeString("es-CO")}`);
           }
 
           main().catch(console.error);
